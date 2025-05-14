@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Biblioteca</title>
+  
+  <link rel="manifest" href="manifest.json">
+  
+  
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h2 { margin-top: 30px; }
+    section { margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 10px; }
+    #conteudoSistema { display: none; }
+    .dropdown-content { display: none; margin-top: 10px; padding-left: 10px; }
+    button { margin: 5px; padding: 5px 10px; }
+  </style>
+</head>
+<body>
+
+  <!-- ========== TELA DE LOGIN ========== -->
+ <section id="formLogin">
+  <h2>Login</h2>
+  <form onsubmit="fazerLogin(); return false;">
+    <input type="text" id="loginNome" placeholder="Nome de usuário" required><br>
+    <input type="password" id="loginSenha" placeholder="Senha" required><br>
+    <button type="submit">Entrar</button>
+  </form>
+  <div id="erroLogin" style="color: red;"></div>
+</section>
+
+
+  <!-- ========== CONTEÚDO PRINCIPAL ========== -->
+  <section id="conteudoSistema">
+    <h2>Bem-vindo, <span id="usuarioLogado"></span>! <button onclick="logout()">Sair</button></h2>
+
+    <!-- Caixa -->
+    <h3>Caixa: <span id="caixaTotal">€ 0.00</span></h3>
+
+    <!-- Cadastro de Cliente -->
+    <section id="cadastroClienteSection">
+      <h3>Cadastrar Cliente</h3>
+      <input type="text" id="nomeCliente" placeholder="Nome">
+      <input type="text" id="telefoneCliente" placeholder="Telefone">
+      <input type="text" id="codigoCliente" placeholder="Código (opcional)">
+      <button onclick="cadastrarCliente()">Cadastrar</button>
+    </section>
+
+    <!-- Cadastro de Livro -->
+    <section id="cadastroLivroSection">
+      <h3>Cadastrar Livro</h3>
+      <input type="text" id="tituloLivro" placeholder="Título">
+      <input type="text" id="autorLivro" placeholder="Autor">
+      <input type="number" id="precoLivro" placeholder="Preço (€)" step="0.01">
+      <input type="number" id="quantidadeLivro" placeholder="Quantidade">
+      <input type="text" id="codigoLivro" placeholder="Código (opcional)">
+      <button onclick="cadastrarLivro()">Cadastrar</button>
+    </section>
+
+    <!-- Empréstimo -->
+    <section>
+      <h3>Emprestar Livro</h3>
+      <select id="clienteEmprestimo"></select>
+      <select id="livroEmprestimo"></select>
+      <button onclick="emprestarLivro()">Emprestar</button>
+    </section>
+
+    <!-- Venda -->
+    <section>
+      <h3>Vender Livro</h3>
+      <select id="tituloVenda"></select>
+      <button onclick="venderLivro()">Vender</button>
+    </section>
+
+    <!-- Devolução de Empréstimo -->
+    <section>
+      <h3>Devolver Livro (Empréstimo)</h3>
+      <select id="clienteDevolucao"></select>
+      <select id="livroDevolucao"></select>
+      <button onclick="devolverLivroEmprestado()">Devolver</button>
+    </section>
+
+    <!-- Devolução de Venda -->
+    <section id="devolucaoVendaSection">
+      <h3>Devolver Livro (Venda)</h3>
+      <select id="tituloDevolucaoVenda"></select>
+      <button onclick="devolverLivroVendido()">Devolver com Reembolso</button>
+    </section>
+
+    <!-- Estoque -->
+    <section>
+      <h3>Estoque</h3>
+      <ul id="listaLivros"></ul>
+      <div id="estoqueDetalhado"></div>
+    </section>
+
+    <!-- Menus Dropdown -->
+    <section>
+      <h3 onclick="toggleDropdown('clientesDropdown')">Clientes ▼</h3>
+      <div id="clientesDropdown" class="dropdown-content"></div>
+
+      <h3 onclick="toggleDropdown('livrosDropdown')">Livros ▼</h3>
+      <div id="livrosDropdown" class="dropdown-content"></div>
+
+      <h3 onclick="toggleDropdown('historicoDropdown')">Histórico ▼</h3>
+      <div id="historicoDropdown" class="dropdown-content"></div>
+    </section>
+  </section>
+
+  <script src="script.js"></script>
+</body>
+</html>
