@@ -1,16 +1,15 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Sistema de Biblioteca</title>
 
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="manifest.json" />
   
-  <meta name="theme-color" content="#007bff">
+  <meta name="theme-color" content="#007bff" />
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-  <link rel="stylesheet" href="style.css">
-
+  <link rel="stylesheet" href="style.css" />
 
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
@@ -22,7 +21,12 @@
     /* ISBN + botão na mesma linha, responsivo */
     #isbnRow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     #isbnRow input { flex: 1; min-width: 160px; }
-    #reader { width: 300px; margin-top: 10px; }
+    #reader {
+      width: 300px;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
   </style>
 </head>
 
@@ -31,8 +35,8 @@
   <section id="formLogin">
     <h2>Login</h2>
     <form onsubmit="fazerLogin(); return false;">
-      <input type="text" id="loginNome" placeholder="Nome de usuário" required><br>
-      <input type="password" id="loginSenha" placeholder="Senha" required><br>
+      <input type="text" id="loginNome" placeholder="Nome de usuário" required /><br />
+      <input type="password" id="loginSenha" placeholder="Senha" required /><br />
       <button type="submit">Entrar</button>
     </form>
     <div id="erroLogin" style="color: red;"></div>
@@ -48,9 +52,9 @@
     <!-- Cadastro de Cliente -->
     <section id="cadastroClienteSection">
       <h3>Cadastrar Cliente</h3>
-      <input type="text" id="nomeCliente" placeholder="Nome">
-      <input type="text" id="telefoneCliente" placeholder="Telefone">
-      <input type="text" id="codigoCliente" placeholder="Código (opcional)">
+      <input type="text" id="nomeCliente" placeholder="Nome" />
+      <input type="text" id="telefoneCliente" placeholder="Telefone" />
+      <input type="text" id="codigoCliente" placeholder="Código (opcional)" />
       <button onclick="cadastrarCliente()">Cadastrar</button>
     </section>
 
@@ -58,23 +62,23 @@
     <section id="leitorISBN">
       <h3>Leitor de ISBN</h3>
       <div id="isbnRow">
-        <input type="text" id="isbnLivro" placeholder="ISBN">
+        <input type="text" id="isbnLivro" placeholder="ISBN" />
         <button type="button" onclick="buscarISBN()">Buscar dados</button>
-        <button type="button" onclick="startScanner()">Escanear ISBN com câmera</button>
+        <button type="button" onclick="startScanner()">Iniciar Scanner</button>
+        <button type="button" onclick="stopScanner()">Parar Scanner</button>
       </div>
-      <div id="reader" style="width: 300px;"></div>
-
+      <div id="reader"></div>
     </section>
 
     <!-- Cadastro de Livro -->
     <section id="cadastroLivroSection">
       <h3>Cadastrar Livro</h3>
-      <input type="text" id="tituloLivro" placeholder="Título">
-      <input type="text" id="autorLivro" placeholder="Autor">
-      <input type="text" id="generoLivro" placeholder="Gênero (ex: Romance, Cristianismo)">
-      <input type="number" id="precoLivro" placeholder="Preço (€)" step="0.01">
-      <input type="number" id="quantidadeLivro" placeholder="Quantidade">
-      <input type="text" id="codigoLivro" placeholder="Código (opcional)">
+      <input type="text" id="tituloLivro" placeholder="Título" />
+      <input type="text" id="autorLivro" placeholder="Autor" />
+      <input type="text" id="generoLivro" placeholder="Gênero (ex: Romance, Cristianismo)" />
+      <input type="number" id="precoLivro" placeholder="Preço (€)" step="0.01" />
+      <input type="number" id="quantidadeLivro" placeholder="Quantidade" />
+      <input type="text" id="codigoLivro" placeholder="Código (opcional)" />
       <button onclick="cadastrarLivro()">Cadastrar</button>
     </section>
 
@@ -131,35 +135,56 @@
   <!-- Scripts principais -->
   <script src="script.js"></script>
 
-  <!-- Biblioteca html5-qrcode para leitura de ISBN -->
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-
   <script>
+    let html5QrCode = null;
+    let scannerRunning = false;
+
     function startScanner() {
-  const html5QrCode = new Html5Qrcode("reader");
+      if (scannerRunning) return; // evita abrir várias vezes
 
-  const config = {                 //‑‑ formatos 1D (cód. de barras)
-    fps: 10,
-    qrbox: 250,
-    formatsToSupport: [
-      Html5QrcodeSupportedFormats.EAN_13,  // ISBN mais comum
-      Html5QrcodeSupportedFormats.CODE_128,
-      Html5QrcodeSupportedFormats.UPC_A
-    ]
-  };
+      html5QrCode = new Html5Qrcode("reader");
 
-  html5QrCode.start(
-    { facingMode: "environment" }, // câmera traseira
-    config,
-    (decodedText) => {             // sucesso: texto lido
-      document.getElementById("isbnLivro").value = decodedText;
-      buscarISBN();                // preenche campos
-      html5QrCode.stop();          // fecha câmera
-      document.getElementById("reader").innerHTML = "";
-    },
-    () => {}                       // erros ignorados
-  );
-}
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.EAN_13,  // ISBN comum
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.UPC_A
+        ]
+      };
+
+      html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => {
+          document.getElementById("isbnLivro").value = decodedText;
+          buscarISBN();
+          stopScanner();
+        },
+        (errorMessage) => {
+          // erros ignorados aqui
+        }
+      ).then(() => {
+        scannerRunning = true;
+      }).catch(err => {
+        console.error("Erro ao iniciar scanner:", err);
+      });
+    }
+
+    function stopScanner() {
+      if (!scannerRunning || !html5QrCode) return;
+
+      html5QrCode.stop()
+        .then(() => {
+          html5QrCode.clear();
+          document.getElementById("reader").innerHTML = "";
+          scannerRunning = false;
+        })
+        .catch(err => {
+          console.error("Erro ao parar scanner:", err);
+        });
+    }
 
     // PWA: service worker
     if ('serviceWorker' in navigator) {
