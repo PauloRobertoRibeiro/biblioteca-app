@@ -1,43 +1,47 @@
-// Dados iniciais
+// ======================= DADOS INICIAIS =======================
 let usuarios = [
   { nome: "admin", senha: "admin123", tipo: "admin" },
   { nome: "vendedor", senha: "venda123", tipo: "vendedor" }
 ];
 
 let usuarioAtual = null;
-let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
-let livros = JSON.parse(localStorage.getItem("livros")) || [];
-let emprestimos = JSON.parse(localStorage.getItem("emprestimos")) || [];
-let historico = JSON.parse(localStorage.getItem("historico")) || [];
-let caixa = parseFloat(localStorage.getItem("caixa")) || 0;
+let clientes     = JSON.parse(localStorage.getItem("clientes"))     || [];
+let livros       = JSON.parse(localStorage.getItem("livros"))       || [];
+let emprestimos  = JSON.parse(localStorage.getItem("emprestimos"))  || [];
+let historico    = JSON.parse(localStorage.getItem("historico"))    || [];
+let caixa        = parseFloat(localStorage.getItem("caixa"))        || 0;
 
-// ========== LOGIN ==========
+// ========================== LOGIN =============================
 function fazerLogin() {
-  const nome = document.getElementById("loginNome").value;
+  const nome  = document.getElementById("loginNome").value;
   const senha = document.getElementById("loginSenha").value;
   const usuario = usuarios.find(u => u.nome === nome && u.senha === senha);
 
-  if (usuario) {
-    usuarioAtual = usuario;
-    document.getElementById("formLogin").style.display = "none";
-    document.getElementById("conteudoSistema").style.display = "block";
-    document.getElementById("usuarioLogado").innerText = usuario.nome;
-    document.getElementById("erroLogin").innerText = "";
-
-    if (usuario.tipo === "vendedor") {
-      document.getElementById("cadastroLivroSection").style.display = "none";
-      document.getElementById("cadastroClienteSection").style.display = "none";
-      document.getElementById("devolucaoVendaSection").style.display = "none";
-    } else {
-      document.getElementById("cadastroLivroSection").style.display = "block";
-      document.getElementById("cadastroClienteSection").style.display = "block";
-      document.getElementById("devolucaoVendaSection").style.display = "block";
-    }
-
-    atualizarInterface();
-  } else {
+  if (!usuario) {
     document.getElementById("erroLogin").innerText = "Usuário ou senha incorretos.";
+    return;
   }
+
+  usuarioAtual = usuario;
+  document.getElementById("formLogin").style.display     = "none";
+  document.getElementById("conteudoSistema").style.display = "block";
+  document.getElementById("usuarioLogado").innerText = usuario.nome;
+  document.getElementById("erroLogin").innerText = "";
+
+  const vender      = document.getElementById("devolucaoVendaSection");
+  const cadCliente  = document.getElementById("cadastroClienteSection");
+  const cadLivro    = document.getElementById("cadastroLivroSection");
+
+  if (usuario.tipo === "vendedor") {
+    vender.style.display     = "none";
+    cadCliente.style.display = "none";
+    cadLivro.style.display   = "none";
+  } else {
+    vender.style.display     = "block";
+    cadCliente.style.display = "block";
+    cadLivro.style.display   = "block";
+  }
+  atualizarInterface();
 }
 
 function limparErroLogin() {
@@ -48,22 +52,22 @@ function logout() {
   usuarioAtual = null;
   document.getElementById("formLogin").style.display = "block";
   document.getElementById("conteudoSistema").style.display = "none";
-  document.getElementById("loginNome").value = "";
+  document.getElementById("loginNome").value  = "";
   document.getElementById("loginSenha").value = "";
   document.getElementById("erroLogin").innerText = "";
 }
 
-// ========== SCANNER DE CÓDIGO DE BARRAS ==========
-let html5QrCode = null;
+// ======= SCANNER ISBN (html5‑qrcode) ==========================
+let html5QrCode   = null;
+let scannerRunning = false;
 
 function startScanner() {
-  if (!html5QrCode) {
-    html5QrCode = new Html5Qrcode("reader");
-  }
+  if (scannerRunning) return;
 
+  html5QrCode = new Html5Qrcode("reader");
   const config = {
     fps: 10,
-    qrbox: 250,
+    qrbox: { width: 250, height: 250 },
     formatsToSupport: [
       Html5QrcodeSupportedFormats.EAN_13,
       Html5QrcodeSupportedFormats.CODE_128,
@@ -74,57 +78,43 @@ function startScanner() {
   html5QrCode.start(
     { facingMode: "environment" },
     config,
-    (decodedText) => {
-      alert(`Código lido: ${decodedText}`);
+    decodedText => {
       document.getElementById("isbnLivro").value = decodedText;
       buscarISBN();
       stopScanner();
     },
-    (errorMessage) => {
-      // Pode mostrar erro se quiser
-      // console.log("Erro leitura código: ", errorMessage);
-    }
-  ).then(() => {
-    console.log("Scanner iniciado.");
-  }).catch(err => {
-    alert("Erro ao iniciar scanner: " + err);
-  });
+    () => {} // ignora erros de leitura
+  ).then(() => scannerRunning = true)
+   .catch(err => alert("Erro ao iniciar scanner: " + err));
 }
 
 function stopScanner() {
-  if (html5QrCode) {
-    html5QrCode.stop()
-      .then(() => {
-        html5QrCode.clear();
-        document.getElementById("reader").innerHTML = "";
-        console.log("Scanner parado e interface limpa.");
-      })
-      .catch(err => console.error("Erro ao parar scanner:", err));
-  }
+  if (!scannerRunning || !html5QrCode) return;
+  html5QrCode.stop()
+    .then(() => {
+      html5QrCode.clear();
+      document.getElementById("reader").innerHTML = "";
+      scannerRunning = false;
+    })
+    .catch(err => console.error("Erro ao parar scanner:", err));
 }
 
-// ========== BUSCAR LIVRO PELO ISBN ==========
+// ============= BUSCAR DADOS PELO ISBN ========================
 async function buscarISBN() {
   const isbn = document.getElementById("isbnLivro").value.trim();
-  if (!isbn) return alert("Digite o ISBN primeiro.");
-
-  const url = `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`;
+  if (!isbn) { alert("Digite o ISBN."); return; }
 
   try {
-    const res = await fetch(url);
+    const res  = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
     const data = await res.json();
-
-    if (data.totalItems === 0) throw new Error("Livro não encontrado.");
+    if (!data.totalItems) throw new Error("Livro não encontrado.");
 
     const info = data.items[0].volumeInfo;
-
-    // Preenche campos
-    document.getElementById("tituloLivro").value  = info.title || "";
+    document.getElementById("tituloLivro").value  = info.title  || "";
     document.getElementById("autorLivro").value   = (info.authors || []).join(", ");
     document.getElementById("generoLivro").value  = (info.categories || [""]).shift();
 
-    // Mostra capa se existir
-    if (info.imageLinks && info.imageLinks.thumbnail) {
+    if (info.imageLinks?.thumbnail) {
       let img = document.getElementById("capaLivro");
       if (!img) {
         img = document.createElement("img");
@@ -134,138 +124,146 @@ async function buscarISBN() {
       }
       img.src = info.imageLinks.thumbnail;
     }
-
-    alert("Dados preenchidos com sucesso! Confira e salve.");
+    alert("Dados preenchidos! Confira e salve.");
   } catch (err) {
     alert(err.message);
   }
 }
 
-// ========== CLIENTES ==========
+// ==================== CLIENTES ===============================
 function cadastrarCliente() {
-  const nome = document.getElementById("nomeCliente").value.trim();
-  const telefone = document.getElementById("telefoneCliente").value.trim();
-  const codigo = document.getElementById("codigoCliente").value.trim();
+  const nome  = document.getElementById("nomeCliente").value.trim();
+  const tel   = document.getElementById("telefoneCliente").value.trim();
+  const codigo= document.getElementById("codigoCliente").value.trim();
+  if (!nome || !tel) return alert("Preencha nome e telefone.");
 
-  if (!nome || !telefone) return alert("Preencha nome e telefone.");
+  if (clientes.some(c => c.nome === nome) && !confirm("Cliente já existe. Continuar?")) return;
+  clientes.push({ nome, telefone: tel, codigo });
+  salvarDados(); atualizarInterface();
 
-  if (clientes.some(c => c.nome === nome)) {
-    if (!confirm("Cliente já cadastrado. Deseja continuar?")) return;
-  }
-
-  clientes.push({ nome, telefone, codigo });
-  salvarDados();
-  atualizarInterface();
-
-  // Limpar campos
-  document.getElementById("nomeCliente").value = "";
+  document.getElementById("nomeCliente").value  = "";
   document.getElementById("telefoneCliente").value = "";
-  document.getElementById("codigoCliente").value = "";
+  document.getElementById("codigoCliente").value   = "";
 }
 
-// ========== LIVROS ==========
+// ===================== LIVROS ================================
 function cadastrarLivro() {
   const titulo = document.getElementById("tituloLivro").value.trim();
-  const autor = document.getElementById("autorLivro").value.trim();
-  const preco = parseFloat(document.getElementById("precoLivro").value);
-  const quantidade = parseInt(document.getElementById("quantidadeLivro").value);
+  const autor  = document.getElementById("autorLivro").value.trim();
+  const preco  = parseFloat(document.getElementById("precoLivro").value);
+  const quant  = parseInt(document.getElementById("quantidadeLivro").value);
   const codigo = document.getElementById("codigoLivro").value.trim();
   const genero = document.getElementById("generoLivro").value.trim();
 
-  if (!titulo || !autor || isNaN(preco) || isNaN(quantidade) || !genero) {
-    return alert("Preencha todos os campos do livro, incluindo o gênero.");
-  }
+  if (!titulo || !autor || isNaN(preco) || isNaN(quant) || !genero)
+    return alert("Preencha todos os campos.");
 
-  if (livros.some(l => l.titulo === titulo)) {
-    if (!confirm("Livro já cadastrado. Deseja continuar?")) return;
-  }
+  if (livros.some(l => l.titulo === titulo) && !confirm("Livro já existe. Continuar?")) return;
+  livros.push({ titulo, autor, preco, quantidade: quant, codigo, genero });
+  salvarDados(); atualizarInterface();
 
-  livros.push({ titulo, autor, preco, quantidade, codigo, genero });
-  salvarDados();
-  atualizarInterface();
-
-  // Limpar campos
-  document.getElementById("tituloLivro").value = "";
-  document.getElementById("autorLivro").value = "";
-  document.getElementById("precoLivro").value = "";
-  document.getElementById("quantidadeLivro").value = "";
-  document.getElementById("codigoLivro").value = "";
-  document.getElementById("generoLivro").value = "";
+  ["tituloLivro","autorLivro","precoLivro","quantidadeLivro",
+   "codigoLivro","generoLivro"].forEach(id => document.getElementById(id).value = "");
 }
 
-// ========== EMPRÉSTIMO ==========
+// ==================== EMPRÉSTIMO / VENDA =====================
 function emprestarLivro() {
   const cliente = document.getElementById("clienteEmprestimo").value;
-  const livro = document.getElementById("livroEmprestimo").value;
-  const l = livros.find(l => l.titulo === livro);
-
-  if (!cliente || !livro || !l || l.quantidade <= 0) return alert("Selecione cliente e livro disponível.");
+  const livro   = document.getElementById("livroEmprestimo").value;
+  const l = livros.find(x => x.titulo === livro);
+  if (!cliente || !l || l.quantidade <= 0) return alert("Selecione cliente e livro disponível.");
 
   emprestimos.push({ cliente, livro });
   l.quantidade--;
   historico.push(`Empréstimo: ${livro} para ${cliente}`);
-  salvarDados();
-  atualizarInterface();
+  salvarDados(); atualizarInterface();
 }
 
-// ========== VENDA ==========
 function venderLivro() {
   const titulo = document.getElementById("tituloVenda").value;
-  const livro = livros.find(l => l.titulo === titulo);
-
+  const livro  = livros.find(l => l.titulo === titulo);
   if (!livro || livro.quantidade <= 0) return alert("Livro não disponível.");
 
-  caixa += livro.preco;
-  livro.quantidade--;
+  caixa += livro.preco; livro.quantidade--;
   historico.push(`Venda: ${livro.titulo} (€${livro.preco.toFixed(2)})`);
-  salvarDados();
-  atualizarInterface();
+  salvarDados(); atualizarInterface();
 }
 
-// ========== DEVOLUÇÃO DE EMPRÉSTIMO ==========
+// =================== DEVOLUÇÕES ==============================
 function devolverLivroEmprestado() {
-  const selecionado = document.getElementById("livroDevolucao").value;
-  if (!selecionado) return alert("Selecione um empréstimo para devolver.");
+  const sel = document.getElementById("livroDevolucao").value;
+  if (!sel) return alert("Selecione um empréstimo.");
+  const [cliente, livro] = sel.split(" - ");
+  const idx = emprestimos.findIndex(e => e.cliente === cliente && e.livro === livro);
+  if (idx === -1) return alert("Empréstimo não encontrado.");
 
-  // Espera formato "Cliente - Livro"
-  const [cliente, livro] = selecionado.split(" - ");
-
-  const index = emprestimos.findIndex(e => e.cliente === cliente && e.livro === livro);
-  if (index === -1) return alert("Empréstimo não encontrado.");
-
-  const l = livros.find(l => l.titulo === livro);
+  const l = livros.find(x => x.titulo === livro);
   if (l) l.quantidade++;
-  emprestimos.splice(index, 1);
-  historico.push(`Devolução (empréstimo): ${livro} de ${cliente}`);
-  salvarDados();
-  atualizarInterface();
+  emprestimos.splice(idx,1);
+  historico.push(`Devolução: ${livro} de ${cliente}`);
+  salvarDados(); atualizarInterface();
 }
 
-// ========== DEVOLUÇÃO DE VENDA ==========
 function devolverLivroVendido() {
   const titulo = document.getElementById("tituloDevolucaoVenda").value;
-  const livro = livros.find(l => l.titulo === titulo);
+  const livro  = livros.find(l => l.titulo === titulo);
   if (!livro) return alert("Livro não encontrado.");
 
-  caixa -= livro.preco;
-  livro.quantidade++;
-  historico.push(`Devolução com reembolso: ${titulo} (-€${livro.preco.toFixed(2)})`);
-  salvarDados();
-  atualizarInterface();
+  caixa -= livro.preco; livro.quantidade++;
+  historico.push(`Reembolso: ${titulo} (-€${livro.preco.toFixed(2)})`);
+  salvarDados(); atualizarInterface();
 }
 
-// ========== INTERFACE ==========
+// ================== INTERFACE / DROPDOWNS ====================
 function atualizarInterface() {
   document.getElementById("caixaTotal").innerText = `€ ${caixa.toFixed(2)}`;
 
   atualizarSelect("clienteEmprestimo", clientes.map(c => c.nome));
   atualizarSelect("clienteDevolucao", clientes.map(c => c.nome));
   atualizarSelect("livroEmprestimo", livros.filter(l => l.quantidade > 0).map(l => l.titulo));
-
-  // Para devolução de empréstimos, mostrar "Cliente - Livro"
   atualizarSelect("livroDevolucao", emprestimos.map(e => `${e.cliente} - ${e.livro}`));
-
   atualizarSelect("tituloVenda", livros.filter(l => l.quantidade > 0).map(l => l.titulo));
   atualizarSelect("tituloDevolucaoVenda", livros.map(l => l.titulo));
+
+  document.getElementById("listaLivros").innerHTML =
+    livros.map(l => `<li>${l.titulo} (${l.genero}) - ${l.quantidade} und</li>`).join("");
+
+  document.getElementById("clientesDropdown").innerHTML =
+    clientes.map(c => `<div>${c.nome} - ${c.telefone}</div>`).join("");
+
+  document.getElementById("livrosDropdown").innerHTML =
+    livros.map(l => `<div>${l.titulo} (${l.genero}) - €${l.preco.toFixed(2)} (${l.quantidade})</div>`).join("");
+
+  document.getElementById("historicoDropdown").innerHTML =
+    historico.slice(-20).map(h => `<div>${h}</div>`).join("");
+
+  // fecha menus para garantir toggle correto
+  ["clientesDropdown","livrosDropdown","historicoDropdown"].forEach(id =>
+    document.getElementById(id).style.display = "none");
 }
-  // List
+
+function atualizarSelect(id, itens) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = itens.map(x => `<option value="${x}">${x}</option>`).join("");
+}
+
+function toggleDropdown(id) {
+  const div = document.getElementById(id);
+  const aberto = div.style.display === "block";
+  div.style.display = aberto ? "none" : "block";
+}
+
+// ================ SALVAR / LOAD ==============================
+function salvarDados() {
+  localStorage.setItem("clientes",    JSON.stringify(clientes));
+  localStorage.setItem("livros",      JSON.stringify(livros));
+  localStorage.setItem("emprestimos", JSON.stringify(emprestimos));
+  localStorage.setItem("historico",   JSON.stringify(historico));
+  localStorage.setItem("caixa",       String(caixa));
+}
+
+// ================ LISTENERS INICIAIS =========================
+document.getElementById("loginNome" ).addEventListener("input", limparErroLogin);
+document.getElementById("loginSenha").addEventListener("input", limparErroLogin);
+
+window.onload = atualizarInterface;
