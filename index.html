@@ -2,14 +2,16 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema de Biblioteca</title>
-  
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="/biblioteca-app/style.css">
 
+  <link rel="manifest" href="manifest.json">
   
+  <meta name="theme-color" content="#007bff">
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <link rel="stylesheet" href="style.css">
+
+
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     h2 { margin-top: 30px; }
@@ -17,24 +19,24 @@
     #conteudoSistema { display: none; }
     .dropdown-content { display: none; margin-top: 10px; padding-left: 10px; }
     button { margin: 5px; padding: 5px 10px; }
+    /* ISBN + botão na mesma linha, responsivo */
+    #isbnRow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    #isbnRow input { flex: 1; min-width: 160px; }
+    #reader { width: 300px; margin-top: 10px; }
   </style>
-  <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#007bff">
-
 </head>
+
 <body>
-
   <!-- ========== TELA DE LOGIN ========== -->
- <section id="formLogin">
-  <h2>Login</h2>
-  <form onsubmit="fazerLogin(); return false;">
-    <input type="text" id="loginNome" placeholder="Nome de usuário" required><br>
-    <input type="password" id="loginSenha" placeholder="Senha" required><br>
-    <button type="submit">Entrar</button>
-  </form>
-  <div id="erroLogin" style="color: red;"></div>
-</section>
-
+  <section id="formLogin">
+    <h2>Login</h2>
+    <form onsubmit="fazerLogin(); return false;">
+      <input type="text" id="loginNome" placeholder="Nome de usuário" required><br>
+      <input type="password" id="loginSenha" placeholder="Senha" required><br>
+      <button type="submit">Entrar</button>
+    </form>
+    <div id="erroLogin" style="color: red;"></div>
+  </section>
 
   <!-- ========== CONTEÚDO PRINCIPAL ========== -->
   <section id="conteudoSistema">
@@ -52,11 +54,24 @@
       <button onclick="cadastrarCliente()">Cadastrar</button>
     </section>
 
+    <!-- Leitor de ISBN -->
+    <section id="leitorISBN">
+      <h3>Leitor de ISBN</h3>
+      <div id="isbnRow">
+        <input type="text" id="isbnLivro" placeholder="ISBN">
+        <button type="button" onclick="buscarISBN()">Buscar dados</button>
+        <button type="button" onclick="startScanner()">Escanear ISBN com câmera</button>
+      </div>
+      <div id="reader" style="width: 300px;"></div>
+
+    </section>
+
     <!-- Cadastro de Livro -->
     <section id="cadastroLivroSection">
       <h3>Cadastrar Livro</h3>
       <input type="text" id="tituloLivro" placeholder="Título">
       <input type="text" id="autorLivro" placeholder="Autor">
+      <input type="text" id="generoLivro" placeholder="Gênero (ex: Romance, Cristianismo)">
       <input type="number" id="precoLivro" placeholder="Preço (€)" step="0.01">
       <input type="number" id="quantidadeLivro" placeholder="Quantidade">
       <input type="text" id="codigoLivro" placeholder="Código (opcional)">
@@ -113,19 +128,47 @@
     </section>
   </section>
 
+  <!-- Scripts principais -->
   <script src="script.js"></script>
-<script>
-  
-  if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js')
-      .then(reg => console.log('Service Worker registrado', reg))
-      .catch(err => console.error('Erro ao registrar o Service Worker:', err));
-  });
+
+  <!-- Biblioteca html5-qrcode para leitura de ISBN -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+  <script>
+    function startScanner() {
+  const html5QrCode = new Html5Qrcode("reader");
+
+  const config = {                 //‑‑ formatos 1D (cód. de barras)
+    fps: 10,
+    qrbox: 250,
+    formatsToSupport: [
+      Html5QrcodeSupportedFormats.EAN_13,  // ISBN mais comum
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.UPC_A
+    ]
+  };
+
+  html5QrCode.start(
+    { facingMode: "environment" }, // câmera traseira
+    config,
+    (decodedText) => {             // sucesso: texto lido
+      document.getElementById("isbnLivro").value = decodedText;
+      buscarISBN();                // preenche campos
+      html5QrCode.stop();          // fecha câmera
+      document.getElementById("reader").innerHTML = "";
+    },
+    () => {}                       // erros ignorados
+  );
 }
 
-</script>
-
-
+    // PWA: service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(r => console.log('Service Worker registrado', r))
+          .catch(e => console.error('Erro ao registrar SW:', e));
+      });
+    }
+  </script>
 </body>
 </html>
