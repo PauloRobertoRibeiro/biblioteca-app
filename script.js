@@ -22,16 +22,11 @@ function fazerLogin() {
     document.getElementById("formLogin").style.display = "none";
     document.getElementById("conteudoSistema").style.display = "block";
     document.getElementById("usuarioLogado").innerText = usuario.nome;
-    document.getElementById("erroLogin").innerText = "";
 
     if (usuario.tipo === "vendedor") {
       document.getElementById("cadastroLivroSection").style.display = "none";
       document.getElementById("cadastroClienteSection").style.display = "none";
       document.getElementById("devolucaoVendaSection").style.display = "none";
-    } else {
-      document.getElementById("cadastroLivroSection").style.display = "block";
-      document.getElementById("cadastroClienteSection").style.display = "block";
-      document.getElementById("devolucaoVendaSection").style.display = "block";
     }
 
     atualizarInterface();
@@ -40,56 +35,13 @@ function fazerLogin() {
   }
 }
 
-function limparErroLogin() {
-  document.getElementById("erroLogin").innerText = "";
-}
-
 function logout() {
   usuarioAtual = null;
   document.getElementById("formLogin").style.display = "block";
   document.getElementById("conteudoSistema").style.display = "none";
   document.getElementById("loginNome").value = "";
   document.getElementById("loginSenha").value = "";
-  document.getElementById("erroLogin").innerText = "";
 }
-
-async function buscarISBN() {
-  const isbn = document.getElementById("isbnLivro").value.trim();
-  if (!isbn) return alert("Digite o ISBN primeiro.");
-
-  const url = `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`;
-
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (data.totalItems === 0) throw new Error("Livro não encontrado.");
-
-    const info = data.items[0].volumeInfo;
-
-    // Preenche campos
-    document.getElementById("tituloLivro").value  = info.title || "";
-    document.getElementById("autorLivro").value   = (info.authors || []).join(", ");
-    document.getElementById("generoLivro").value  = (info.categories || [""]).shift();
-
-    // Mostra capa se quiser
-    if (info.imageLinks && info.imageLinks.thumbnail) {
-      let img = document.getElementById("capaLivro");
-      if (!img) {
-        img = document.createElement("img");
-        img.id = "capaLivro";
-        img.style.maxWidth = "120px";
-        document.getElementById("cadastroLivroSection").appendChild(img);
-      }
-      img.src = info.imageLinks.thumbnail;
-    }
-
-    alert("Dados preenchidos com sucesso! Confira e salve.");
-  } catch (err) {
-    alert(err.message);
-  }
-}
-
 
 // ========== CLIENTES ==========
 function cadastrarCliente() {
@@ -106,8 +58,6 @@ function cadastrarCliente() {
   clientes.push({ nome, telefone, codigo });
   salvarDados();
   atualizarInterface();
-
-  // Limpar campos
   document.getElementById("nomeCliente").value = "";
   document.getElementById("telefoneCliente").value = "";
   document.getElementById("codigoCliente").value = "";
@@ -120,27 +70,23 @@ function cadastrarLivro() {
   const preco = parseFloat(document.getElementById("precoLivro").value);
   const quantidade = parseInt(document.getElementById("quantidadeLivro").value);
   const codigo = document.getElementById("codigoLivro").value.trim();
-  const genero = document.getElementById("generoLivro").value.trim();
 
-  if (!titulo || !autor || isNaN(preco) || isNaN(quantidade) || !genero) {
-    return alert("Preencha todos os campos do livro, incluindo o gênero.");
+  if (!titulo || !autor || isNaN(preco) || isNaN(quantidade)) {
+    return alert("Preencha todos os campos do livro.");
   }
 
   if (livros.some(l => l.titulo === titulo)) {
     if (!confirm("Livro já cadastrado. Deseja continuar?")) return;
   }
 
-  livros.push({ titulo, autor, preco, quantidade, codigo, genero });
+  livros.push({ titulo, autor, preco, quantidade, codigo });
   salvarDados();
   atualizarInterface();
-
-  // Limpar campos
   document.getElementById("tituloLivro").value = "";
   document.getElementById("autorLivro").value = "";
   document.getElementById("precoLivro").value = "";
   document.getElementById("quantidadeLivro").value = "";
   document.getElementById("codigoLivro").value = "";
-  document.getElementById("generoLivro").value = "";
 }
 
 // ========== EMPRÉSTIMO ==========
@@ -148,7 +94,6 @@ function emprestarLivro() {
   const cliente = document.getElementById("clienteEmprestimo").value;
   const livro = document.getElementById("livroEmprestimo").value;
   const l = livros.find(l => l.titulo === livro);
-
   if (!cliente || !livro || !l || l.quantidade <= 0) return alert("Selecione cliente e livro disponível.");
 
   emprestimos.push({ cliente, livro });
@@ -162,7 +107,6 @@ function emprestarLivro() {
 function venderLivro() {
   const titulo = document.getElementById("tituloVenda").value;
   const livro = livros.find(l => l.titulo === titulo);
-
   if (!livro || livro.quantidade <= 0) return alert("Livro não disponível.");
 
   caixa += livro.preco;
@@ -174,12 +118,8 @@ function venderLivro() {
 
 // ========== DEVOLUÇÃO DE EMPRÉSTIMO ==========
 function devolverLivroEmprestado() {
-  const selecionado = document.getElementById("livroDevolucao").value;
-  if (!selecionado) return alert("Selecione um empréstimo para devolver.");
-
-  // Espera formato "Cliente - Livro"
-  const [cliente, livro] = selecionado.split(" - ");
-
+  const cliente = document.getElementById("clienteDevolucao").value;
+  const livro = document.getElementById("livroDevolucao").value;
   const index = emprestimos.findIndex(e => e.cliente === cliente && e.livro === livro);
   if (index === -1) return alert("Empréstimo não encontrado.");
 
@@ -211,31 +151,16 @@ function atualizarInterface() {
   atualizarSelect("clienteEmprestimo", clientes.map(c => c.nome));
   atualizarSelect("clienteDevolucao", clientes.map(c => c.nome));
   atualizarSelect("livroEmprestimo", livros.filter(l => l.quantidade > 0).map(l => l.titulo));
-
-  // Para devolução de empréstimos, mostrar "Cliente - Livro"
-  atualizarSelect("livroDevolucao", emprestimos.map(e => `${e.cliente} - ${e.livro}`));
-
+  atualizarSelect("livroDevolucao", emprestimos.map(e => e.livro));
   atualizarSelect("tituloVenda", livros.filter(l => l.quantidade > 0).map(l => l.titulo));
   atualizarSelect("tituloDevolucaoVenda", livros.map(l => l.titulo));
 
-  // Lista livros com gênero e quantidade
   const listaLivros = document.getElementById("listaLivros");
-  listaLivros.innerHTML = livros
-    .map(l => `<li>${l.titulo} (${l.genero}) - ${l.quantidade} und</li>`)
-    .join("");
+  listaLivros.innerHTML = livros.map(l => `<li>${l.titulo} - ${l.quantidade} und</li>`).join("");
 
-  document.getElementById("clientesDropdown").innerHTML = clientes
-    .map(c => `<div>${c.nome} - ${c.telefone}</div>`)
-    .join("");
-
-  document.getElementById("livrosDropdown").innerHTML = livros
-    .map(l => `<div>${l.titulo} (${l.genero}) - €${l.preco.toFixed(2)} (${l.quantidade})</div>`)
-    .join("");
-
-  document.getElementById("historicoDropdown").innerHTML = historico
-    .slice(-20)
-    .map(h => `<div>${h}</div>`)
-    .join("");
+  document.getElementById("clientesDropdown").innerHTML = clientes.map(c => `<div>${c.nome} - ${c.telefone}</div>`).join("");
+  document.getElementById("livrosDropdown").innerHTML = livros.map(l => `<div>${l.titulo} - €${l.preco.toFixed(2)} (${l.quantidade})</div>`).join("");
+  document.getElementById("historicoDropdown").innerHTML = historico.slice(-20).map(h => `<div>${h}</div>`).join("");
 }
 
 function atualizarSelect(id, itens) {
@@ -256,7 +181,3 @@ function salvarDados() {
   localStorage.setItem("historico", JSON.stringify(historico));
   localStorage.setItem("caixa", caixa.toString());
 }
-
-// Limpar erro no login quando usuário digita
-document.getElementById("loginNome").addEventListener("input", limparErroLogin);
-document.getElementById("loginSenha").addEventListener("input", limparErroLogin);
