@@ -99,6 +99,9 @@ ul li {
   font-weight: bold;
 }
 
+#capaLivro { margin: 10px 0; border-radius: 6px; }
+
+
 /* Responsividade para telas pequenas */
 @media (max-width: 768px) {
   .container {
@@ -153,4 +156,22 @@ ul li {
     text-align: center;
   }
 }
+
+#isbnContainer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+#isbnContainer input {
+  flex: 1;
+  min-width: 200px;
+}
+
+#isbnContainer button {
+  white-space: nowrap;
+}
+
 

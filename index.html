@@ -44,24 +44,33 @@
     <h3>Caixa: <span id="caixaTotal">€ 0.00</span></h3>
 
     <!-- Cadastro de Cliente -->
-    <section id="cadastroClienteSection">
-      <h3>Cadastrar Cliente</h3>
-      <input type="text" id="nomeCliente" placeholder="Nome">
-      <input type="text" id="telefoneCliente" placeholder="Telefone">
-      <input type="text" id="codigoCliente" placeholder="Código (opcional)">
-      <button onclick="cadastrarCliente()">Cadastrar</button>
-    </section>
+<section id="cadastroClienteSection">
+  <h3>Cadastrar Cliente</h3>
+  <input type="text" id="nomeCliente" placeholder="Nome">
+  <input type="text" id="telefoneCliente" placeholder="Telefone">
+  <input type="text" id="codigoCliente" placeholder="Código (opcional)">
+  <button onclick="cadastrarCliente()">Cadastrar</button>
+</section>
 
-    <!-- Cadastro de Livro -->
-    <section id="cadastroLivroSection">
-      <h3>Cadastrar Livro</h3>
-      <input type="text" id="tituloLivro" placeholder="Título">
-      <input type="text" id="autorLivro" placeholder="Autor">
-      <input type="number" id="precoLivro" placeholder="Preço (€)" step="0.01">
-      <input type="number" id="quantidadeLivro" placeholder="Quantidade">
-      <input type="text" id="codigoLivro" placeholder="Código (opcional)">
-      <button onclick="cadastrarLivro()">Cadastrar</button>
-    </section>
+<!-- Cadastro de Livro -->
+<section id="cadastroLivroSection">
+  <h3>Cadastrar Livro</h3>
+
+  <div id="isbnContainer">
+    <input type="text" id="isbnLivro" placeholder="ISBN">
+    <button type="button" onclick="buscarISBN()">Buscar dados</button>
+  </div>
+
+  <input type="text" id="tituloLivro" placeholder="Título">
+  <input type="text" id="autorLivro" placeholder="Autor">
+  <input type="text" id="generoLivro" placeholder="Gênero (ex: Romance, Cristianismo)">
+  <input type="number" id="precoLivro" placeholder="Preço (€)" step="0.01">
+  <input type="number" id="quantidadeLivro" placeholder="Quantidade">
+  <input type="text" id="codigoLivro" placeholder="Código (opcional)">
+  <button onclick="cadastrarLivro()">Cadastrar</button>
+</section>
+
+
 
     <!-- Empréstimo -->
     <section>
