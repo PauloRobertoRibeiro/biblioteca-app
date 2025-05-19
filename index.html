@@ -49,6 +49,23 @@
     <!-- Caixa -->
     <h3>Caixa: <span id="caixaTotal">€ 0.00</span></h3>
 
+    <!-- Painel de Estatísticas -->
+    <section id="painelEstatisticas" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 20px; border-radius: 10px;">
+      <h2>Painel de Estatísticas</h2>
+      <div>
+        <h3>Livros Mais Emprestados</h3>
+        <ul id="listaLivrosMaisEmprestados"></ul>
+      </div>
+      <div>
+        <h3>Vendas do Dia</h3>
+        <p id="totalVendasDia">€ 0.00</p>
+      </div>
+      <div>
+        <h3>Clientes Ativos (últimos 30 dias)</h3>
+        <p id="clientesAtivos">0</p>
+      </div>
+    </section>
+
     <!-- Cadastro de Cliente -->
     <section id="cadastroClienteSection">
       <h3>Cadastrar Cliente</h3>
@@ -115,6 +132,24 @@
     <!-- Estoque -->
     <section>
       <h3>Estoque</h3>
+      <!-- ⚡ CONTROLES DE FILTRO/BUSCA --------------------------- -->
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0">
+  <input id="buscaInput"  placeholder="Buscar título ou autor…" oninput="filtrarLivros()" />
+  <select id="generoFiltro" onchange="filtrarLivros()">
+    <option value="">— Todos os gêneros —</option>
+  </select>
+  <select id="dispoFiltro" onchange="filtrarLivros()">
+    <option value="">— Disponibilidade —</option>
+    <option value="sim">Só disponíveis</option>
+    <option value="nao">Só esgotados</option>
+  </select>
+
+  <button onclick="exportarJSON()">Exportar JSON</button>
+  <button onclick="exportarCSV()">Exportar CSV</button>
+</div>
+<!-- ------------------------------------------------------- -->
+<ul id="listaLivros"></ul>
+
       <ul id="listaLivros"></ul>
       <div id="estoqueDetalhado"></div>
     </section>
@@ -136,11 +171,12 @@
   <script src="script.js"></script>
 
   <script>
+    // Scanner QR Code
     let html5QrCode = null;
     let scannerRunning = false;
 
     function startScanner() {
-      if (scannerRunning) return; // evita abrir várias vezes
+      if (scannerRunning) return;
 
       html5QrCode = new Html5Qrcode("reader");
 
@@ -148,7 +184,7 @@
         fps: 10,
         qrbox: { width: 250, height: 250 },
         formatsToSupport: [
-          Html5QrcodeSupportedFormats.EAN_13,  // ISBN comum
+          Html5QrcodeSupportedFormats.EAN_13,
           Html5QrcodeSupportedFormats.CODE_128,
           Html5QrcodeSupportedFormats.UPC_A
         ]
@@ -162,9 +198,7 @@
           buscarISBN();
           stopScanner();
         },
-        (errorMessage) => {
-          // erros ignorados aqui
-        }
+        (errorMessage) => {}
       ).then(() => {
         scannerRunning = true;
       }).catch(err => {
@@ -194,6 +228,10 @@
           .catch(e => console.error('Erro ao registrar SW:', e));
       });
     }
-  </script>
-</body>
-</html>
+
+    // Função para atualizar o painel de estatísticas
+    function atualizarPainelEstatisticas() {
+      const clientes = JSON.parse(localStorage.getItem('clientes') || '[]');
+      const livros = JSON.parse(localStorage.getItem('livros') || '[]');
+      const empretimos =JSON.parse(localStorage.getItem('emprestimos') || '[]');
+    }
