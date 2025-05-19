@@ -10,9 +10,9 @@ body {
   padding: 20px;
   background: #f7f9fc;
   color: #333;
-  line-height: 1.4;
 }
 
+/* Seções e títulos */
 h2, h3 {
   margin: 15px 0;
 }
@@ -23,53 +23,38 @@ section {
   border-radius: 10px;
   padding: 15px;
   margin-bottom: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+  box-shadow: 0 1px 3px rgba(0,0,0,.07);
   max-width: 100%;
-  overflow: hidden; /* evita que conteúdo "vaze" */
+  overflow: hidden;
 }
 
+/* Botões */
 button {
   background: #007bff;
   color: #fff;
   border: none;
-  padding: 8px 16px;
+  padding: 6px 14px;
   border-radius: 6px;
   cursor: pointer;
-  transition: opacity 0.2s;
-  font-size: 1rem;
+  transition: .2s;
 }
-
 button:hover {
-  opacity: 0.85;
+  opacity: .85;
 }
 
+/* Inputs e selects - responsivos e limitando largura */
 input, select {
-  padding: 8px 10px;
+  padding: 6px 8px;
   margin: 6px 0;
   border: 1px solid #ccd0d5;
   border-radius: 5px;
   min-width: 140px;
-  font-size: 1rem;
-  width: 100%;
-  max-width: 100%;
+  max-width: 100%; /* Não deixa ultrapassar o container */
   box-sizing: border-box;
+  display: block; /* Ocupa linha inteira */
 }
 
-input[type="number"] {
-  -moz-appearance: textfield; /* para Firefox esconder setas */
-}
-
-input[type=number]::-webkit-inner-spin-button, 
-input[type=number]::-webkit-outer-spin-button { 
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.hidden {
-  display: none;
-}
-
-/* ISBN linha única responsiva */
+/* Campos lado a lado responsivos */
 #isbnRow {
   display: flex;
   flex-wrap: wrap;
@@ -79,63 +64,81 @@ input[type=number]::-webkit-outer-spin-button {
 
 #isbnRow input {
   flex: 1 1 160px;
-  min-width: 160px;
+  min-width: 120px;
   max-width: 100%;
 }
 
-/* Dropdown */
+/* Dropdowns escondidos inicialmente */
 .dropdown-content {
   display: none;
   margin-top: 8px;
   padding-left: 10px;
 }
 
-/* Painel de Estatísticas */
-#painelEstatisticas {
+/* Painel estatísticas layout flexível */
+#painelEst {
   display: flex;
   flex-wrap: wrap;
   gap: 20px;
 }
 
-#painelEstatisticas > div {
+.painel-card {
   flex: 1 1 240px;
   background: #edf1f5;
   border-radius: 8px;
   padding: 12px;
-  box-sizing: border-box;
 }
 
-#painelEstatisticas h3 {
+.painel-card h4 {
   margin-bottom: 8px;
 }
 
-/* Leitor QR Code */
+/* Leitor ISBN */
 #reader {
-  width: 100%;
-  max-width: 320px;
+  width: 300px;
+  max-width: 100%;
   margin-top: 10px;
   border: 1px solid #ccc;
   border-radius: 8px;
 }
 
-/* Formularios e inputs em linhas */
-section input,
-section select {
-  max-width: 300px;
+/* Seções de formulário com vários inputs lado a lado (ex: cadastro cliente, livro) */
+section#cadastroClienteSection input,
+section#cadastroClienteSection button,
+section#cadastroLivroSection input,
+section#cadastroLivroSection button {
+  display: block;
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 10px;
 }
 
-/* Para evitar inputs muito largos quebrando layout */
+/* Formulários de seleção (emprestimo, venda, devolução) */
+section select,
+section button {
+  max-width: 400px;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+/* Cabeçalho com bem-vindo e botão logout responsivos */
+#conteudoSistema > h2 {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Ajuste para telas pequenas */
 @media (max-width: 600px) {
   #isbnRow {
     flex-direction: column;
+    align-items: stretch;
   }
 
-  #isbnRow input,
-  #isbnRow button {
-    width: 100%;
-  }
-
-  #painelEstatisticas {
+  #conteudoSistema > h2 {
     flex-direction: column;
+    align-items: flex-start;
   }
 }
