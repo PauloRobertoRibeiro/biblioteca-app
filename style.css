@@ -130,6 +130,15 @@ section button {
   gap: 10px;
 }
 
+#cadastroLivroSection{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+#cadastroLivroSection > div { flex:1 1 240px; } /* inputs */
+#capaPreview { max-width:140px; height:auto; align-self:flex-start; }
+
+
 /* Ajuste para telas pequenas */
 @media (max-width: 600px) {
   #isbnRow {

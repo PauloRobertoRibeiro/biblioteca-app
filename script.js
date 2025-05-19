@@ -181,6 +181,127 @@ function cadastrarLivro() {
     .forEach(id => document.getElementById(id).value = "");
 }
 
+async function buscarISBN() {
+  const isbn = document.getElementById("isbnLivro").value.trim().replace(/[^0-9X]/gi,'');
+  if (!isbn) { alert("Informe um ISBN"); return; }
+
+  try {
+    // Open Library API
+    const url  = `https://openlibrary.org/isbn/${isbn}.json`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error("ISBN não encontrado");
+
+    const data = await resp.json();
+
+    // Preenche campos se existirem no DOM
+    if (data.title)  document.getElementById("tituloLivro").value = data.title;
+    if (data.by_statement) {
+      document.getElementById("autorLivro").value = data.by_statement;
+    } else if (data.authors?.length) {
+      // Busca nome do primeiro autor
+      const authorResp = await fetch(`https://openlibrary.org${data.authors[0].key}.json`);
+      if (authorResp.ok) {
+        const author = await authorResp.json();
+        document.getElementById("autorLivro").value = author.name || "";
+      }
+    }
+
+    // Gênero: OpenLibrary não traz um “genre” simples, então deixamos vazio.
+    // Você pode mapear por subject depois se quiser.
+
+    alert("Dados do ISBN carregados. Confira e complete o cadastro.");
+  } catch (e) {
+    console.error(e);
+    alert("Não foi possível encontrar informações para esse ISBN.");
+  }
+}
+
+// ================= LEITOR DE CÓDIGO DE BARRAS =================
+let html5QrCode = null;
+let scannerRunning = false;
+
+function startScanner() {
+  if (scannerRunning) return;
+
+  html5QrCode = new Html5Qrcode("reader");
+
+  const config = {
+    fps: 10,
+    qrbox: { width: 250, height: 250 },
+    formatsToSupport: [
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.UPC_A
+    ]
+  };
+
+  html5QrCode.start(
+    { facingMode: "environment" },
+    config,
+    (decodedText) => {
+      document.getElementById("isbnLivro").value = decodedText;
+      buscarISBN();
+      stopScanner();
+    }
+  ).then(() => {
+    scannerRunning = true;
+  }).catch(err => console.error("Erro ao iniciar scanner:", err));
+}
+
+function stopScanner() {
+  if (!scannerRunning || !html5QrCode) return;
+
+  html5QrCode.stop()
+    .then(() => {
+      html5QrCode.clear();
+      document.getElementById("reader").innerHTML = "";
+      scannerRunning = false;
+    })
+    .catch(err => console.error("Erro ao parar scanner:", err));
+}
+
+// ===== BUSCA ISBN (Open Library) =========================
+async function buscarISBN() {
+  const isbn = document
+      .getElementById("isbnLivro")
+      .value.trim()
+      .replace(/[^0-9X]/gi, "");          // mantém dígitos ou X
+
+  if (!isbn) return alert("Digite um ISBN válido.");
+
+  const url = `https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`;
+
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    const info = data[`ISBN:${isbn}`];
+    if (!info) return alert("ISBN não encontrado.");
+
+    const titulo  = info.title || "";
+    const autor   = (info.authors && info.authors[0]?.name) || "";
+    const capaUrl = info.cover?.medium || info.cover?.large || info.cover?.small || "";
+
+    document.getElementById("tituloLivro").value = titulo;
+    document.getElementById("autorLivro").value  = autor;
+
+    const img = document.getElementById("capaPreview");
+    if (capaUrl) {
+      img.src = capaUrl.replace(/^http:/, "https:"); // força https
+      img.style.display = "block";
+    } else {
+      img.style.display = "none";
+    }
+
+    document.getElementById("precoLivro").value      ||= "0";
+    document.getElementById("quantidadeLivro").value ||= "1";
+  } catch (err) {
+    console.error("Erro na busca ISBN:", err);
+    alert("Falha ao buscar dados. Verifique a conexão.");
+  }
+}
+
+
+
 
 // ============================================================
 //                  EMPRÉSTIMO / VENDA / DEVOLUÇÃO
