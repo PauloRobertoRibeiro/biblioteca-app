@@ -1,45 +1,42 @@
-const CACHE_NAME = "biblioteca-cache-v1";
-const ASSETS = [
+const CACHE_NAME = "biblioteca-livraria-v25";
+const URLS_TO_CACHE = [
   "./",
   "./index.html",
   "./style.css",
   "./script.js",
   "./manifest.json",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
-  "https://unpkg.com/html5-qrcode"   // lib externa
+  "./offline.html",
+  "./icon-192.png",
+  "./icon-512.png"
 ];
 
-self.addEventListener("install", e => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(URLS_TO_CACHE))
   );
   self.skipWaiting();
 });
 
-self.addEventListener("activate", e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) =>
       Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+        cacheNames.map((name) => {
+          if (name !== CACHE_NAME) return caches.delete(name);
+          return null;
+        })
       )
     )
   );
   self.clients.claim();
 });
 
-self.addEventListener("fetch", e => {
-  if (e.request.method !== "GET") return;
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
 
-  e.respondWith(
-    caches.match(e.request).then(resp =>
-      resp ||
-      fetch(e.request).then(fetchResp => {
-        // opcional: salva novos assets em cache
-        const clone = fetchResp.clone();
-        caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-        return fetchResp;
-      }).catch(() => caches.match("./index.html"))
-    )
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      return cached || fetch(event.request).catch(() => caches.match("./offline.html"));
+    })
   );
 });

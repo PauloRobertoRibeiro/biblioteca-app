@@ -1,238 +1,555 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sistema de Biblioteca</title>
-
-  <link rel="manifest" href="manifest.json" />
-  
-  <meta name="theme-color" content="#007bff" />
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-  <link rel="stylesheet" href="style.css" />
-
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h2 { margin-top: 30px; }
-    section { margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 10px; }
-    #conteudoSistema { display: none; }
-    .dropdown-content { display: none; margin-top: 10px; padding-left: 10px; }
-    button { margin: 5px; padding: 5px 10px; }
-    /* ISBN + botão na mesma linha, responsivo */
-    #isbnRow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-    #isbnRow input { flex: 1; min-width: 160px; }
-    #reader {
-      width: 300px;
-      margin-top: 10px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2f513f">
+  <title>Biblioteca Livraria</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-  <!-- ========== TELA DE LOGIN ========== -->
-  <section id="formLogin">
-    <h2>Login</h2>
-    <form onsubmit="fazerLogin(); return false;">
-      <input type="text" id="loginNome" placeholder="Nome de usuário" required /><br />
-      <input type="password" id="loginSenha" placeholder="Senha" required /><br />
-      <button type="button" onclick="fazerLogin()">Entrar</button>
-    </form>
-    <div id="erroLogin" style="color: red;"></div>
+  <main class="app-shell">
+    <section class="login-view" id="loginView">
+      <div class="login-panel">
+        <img class="brand-mark" src="icon-192.png" alt="">
+        <p class="eyebrow">Biblioteca Livraria</p>
+        <h1>Gestao de livros, vendas e reservas.</h1>
+        <form id="loginForm" class="form-grid">
+          <label>
+            Usuario
+            <input type="text" id="loginNome" value="admin" autocomplete="username" required>
+          </label>
+          <label>
+            Senha
+            <input type="password" id="loginSenha" value="admin123" autocomplete="current-password" required>
+          </label>
+          <button type="submit" class="primary-action">Entrar</button>
+          <p class="login-hint">admin/admin123 ou vendedor/venda123</p>
+          <p class="error-text" id="erroLogin"></p>
+        </form>
+      </div>
+    </section>
+
+    <section class="workspace hidden" id="workspace">
+      <datalist id="listaCategorias">
+        <option value="Leitura congregacional"></option>
+        <option value="Doutrina"></option>
+        <option value="Devocional"></option>
+        <option value="Familia"></option>
+        <option value="Jovens"></option>
+        <option value="Infantil"></option>
+        <option value="Biografia"></option>
+      </datalist>
+      <datalist id="listaLivrarias"></datalist>
+      <header class="topbar">
+        <div>
+          <img class="brand-mark small" src="icon-192.png" alt="">
+          <p class="eyebrow">Painel</p>
+          <h1>Biblioteca Livraria</h1>
+        </div>
+        <div class="session">
+          <span id="usuarioLogado"></span>
+          <button type="button" class="ghost-button" id="logoutBtn">Sair</button>
+        </div>
+      </header>
+
+      <section class="metrics" aria-label="Resumo">
+        <article>
+          <span>Caixa hoje</span>
+          <div class="money-line">
+            <strong id="caixaTotal">****</strong>
+            <button type="button" class="icon-button" id="btnToggleCaixa" title="Mostrar ou ocultar caixa">Ver</button>
+          </div>
+        </article>
+        <article>
+          <span>Estoque</span>
+          <strong id="totalEstoque">0</strong>
+        </article>
+        <article>
+          <span>Vendidos</span>
+          <strong id="totalVendido">0</strong>
+        </article>
+        <article>
+          <span>Reservas ativas</span>
+          <strong id="totalReservas">0</strong>
+        </article>
+        <article>
+          <span>A pagar livraria</span>
+          <strong id="totalPagarLivraria">****</strong>
+        </article>
+      </section>
+
+      <nav class="tabs" aria-label="Areas do sistema">
+        <button type="button" class="tab active" data-tab="operacao">Operacao</button>
+        <button type="button" class="tab" data-tab="entrada">Entrada</button>
+        <button type="button" class="tab" data-tab="estoque">Estoque</button>
+        <button type="button" class="tab" data-tab="reservas">Reservas</button>
+        <button type="button" class="tab" data-tab="clientes">Clientes</button>
+        <button type="button" class="tab" data-tab="whatsapp">WhatsApp</button>
+        <button type="button" class="tab" data-tab="relatorios">Relatorios</button>
+        <button type="button" class="tab" data-tab="acerto">Acerto</button>
+        <button type="button" class="tab" data-tab="historico">Historico</button>
+      </nav>
+
+      <section class="tab-panel active" id="tab-operacao">
+        <section class="workbench">
+          <article class="quick-card focus-card">
+            <span class="quick-label">Proxima acao</span>
+            <strong>Escanear ou buscar livro</strong>
+            <button type="button" class="primary-action" id="btnFocoBusca">Ir para busca</button>
+          </article>
+          <article class="quick-card">
+            <span class="quick-label">Emprestimos em aberto</span>
+            <strong id="totalEmprestimos">0</strong>
+            <button type="button" class="secondary-action" id="btnFocoDevolucao">Devolver livro</button>
+          </article>
+          <article class="quick-card">
+            <span class="quick-label">Estoque baixo</span>
+            <strong id="totalBaixoEstoque">0</strong>
+            <button type="button" class="ghost-button" id="btnVerBaixoEstoque">Ver itens</button>
+          </article>
+        </section>
+
+        <div class="split-layout">
+          <section class="panel search-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Busca rapida</p>
+                <h2>Encontrar livro</h2>
+              </div>
+              <span class="status-pill" id="searchCount">0 resultados</span>
+            </div>
+            <input type="search" id="buscaLivro" placeholder="Codigo, titulo, autor ou editora">
+            <div class="book-results" id="resultadoBusca"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Pessoa</p>
+                <h2>Encontrar cliente</h2>
+              </div>
+              <span class="status-pill" id="clientSearchCount">0 resultados</span>
+            </div>
+            <input type="search" id="buscaCliente" placeholder="Nome, telefone ou codigo">
+            <div class="client-results" id="resultadoClientes"></div>
+          </section>
+        </div>
+
+        <div class="split-layout">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Saida de estoque</p>
+                <h2>Venda ou emprestimo</h2>
+              </div>
+            </div>
+            <form id="formSaida" class="form-grid">
+              <label>
+                Livro
+                <select id="livroSaida"></select>
+              </label>
+              <label>
+                Cliente
+                <select id="clienteSaida"></select>
+              </label>
+              <div class="client-profile" id="fichaCliente">
+                <strong>Selecione um cliente</strong>
+                <span>A ficha aparece aqui antes de emprestar.</span>
+              </div>
+              <label>
+                Quantidade
+                <input type="number" id="quantidadeSaida" min="1" value="1">
+              </label>
+              <div class="button-row">
+                <button type="button" class="primary-action" id="btnVender">Vender</button>
+                <button type="button" class="secondary-action" id="btnEmprestar">Emprestar</button>
+              </div>
+            </form>
+          </section>
+        </div>
+
+        <section class="panel" id="devolucaoPainel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Retorno</p>
+              <h2>Devolver livro emprestado</h2>
+            </div>
+          </div>
+          <div class="loan-list" id="listaEmprestimos"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Baixa</p>
+              <h2>Devolver livros para a livraria</h2>
+            </div>
+          </div>
+          <form id="formBaixaLivraria" class="form-grid">
+            <label>
+              Livro
+              <select id="livroBaixa"></select>
+            </label>
+            <label>
+              Quantidade
+              <input type="number" id="quantidadeBaixa" min="1" value="1">
+            </label>
+            <button type="submit" class="secondary-action">Dar baixa / devolver</button>
+          </form>
+        </section>
+
+      </section>
+
+      <section class="tab-panel" id="tab-entrada">
+        <section class="panel compact-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Leitor movel</p>
+              <h2>Entrada de livros</h2>
+            </div>
+          </div>
+          <form id="formLivro" class="catalog-form">
+            <div class="scan-field">
+              <label>
+                Codigo
+                <input type="text" id="codigoLivro" placeholder="Aponte a camera para o codigo">
+              </label>
+              <div class="button-row">
+                <button type="button" class="secondary-action" id="btnEscanear">Escanear</button>
+                <button type="button" class="ghost-button" id="btnBuscarIsbn">Buscar ISBN</button>
+              </div>
+              <button type="button" class="ghost-button" id="btnSemCodigo">Livro sem codigo</button>
+              <p class="scanner-help" id="statusIsbn">Leia o ISBN no campo acima para preencher automaticamente.</p>
+              <input class="hidden" type="file" id="fotoCodigo" accept="image/*" capture="environment">
+              <input type="hidden" id="capaLivro">
+            </div>
+            <div class="cover-preview" id="capaPreview">
+              <span>Capa</span>
+            </div>
+            <label>
+              Titulo
+              <input type="text" id="tituloLivro" required>
+            </label>
+            <label>
+              Autor
+              <input type="text" id="autorLivro" required>
+            </label>
+            <label>
+              Editora
+              <input type="text" id="editoraLivro">
+            </label>
+              <label>
+                Categoria
+                <input type="text" id="categoriaLivro" list="listaCategorias" placeholder="Escolha ou digite">
+            </label>
+            <label>
+              Preco
+              <input type="number" id="precoLivro" min="0" step="0.01" required>
+            </label>
+            <label>
+              Pagar a livraria
+              <input type="number" id="custoLivro" min="0" step="0.01" placeholder="Valor de repasse">
+            </label>
+            <label>
+              Quantidade
+              <input type="number" id="quantidadeLivro" min="1" value="1" required>
+            </label>
+              <label>
+                Livraria origem
+                <input type="text" id="origemLivro" list="listaLivrarias" placeholder="Nome da livraria">
+            </label>
+            <label>
+              Data do acerto
+              <input type="date" id="dataAcertoLivro">
+            </label>
+            <button type="submit" class="primary-action" id="btnSalvarLivro">Adicionar ao estoque</button>
+            <button type="button" class="ghost-button hidden" id="btnCancelarEdicaoLivro">Cancelar edicao</button>
+          </form>
+        </section>
+      </section>
+
+      <section class="tab-panel" id="tab-estoque">
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Catalogo interno</p>
+              <h2>Estoque da biblioteca</h2>
+            </div>
+            <select id="filtroEstoque">
+              <option value="todos">Todos</option>
+              <option value="baixo">Estoque baixo</option>
+              <option value="zerado">Sem unidades</option>
+              <option value="reservado">Com reserva</option>
+            </select>
+          </div>
+          <div class="inventory-table" id="listaEstoque"></div>
+        </section>
+      </section>
+
+      <section class="tab-panel" id="tab-reservas">
+        <div class="split-layout">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Cliente online</p>
+                <h2>Nova reserva</h2>
+              </div>
+            </div>
+            <form id="formReserva" class="form-grid">
+              <label>
+                Cliente
+                <select id="reservaCliente"></select>
+              </label>
+              <button type="button" class="ghost-button" id="btnClienteRapidoReserva">Novo cliente rapido</button>
+              <label>
+                Telefone
+                <input type="text" id="reservaTelefone" placeholder="WhatsApp" readonly>
+              </label>
+              <label>
+                Livro
+                <select id="reservaLivro"></select>
+              </label>
+              <button type="submit" class="primary-action">Reservar livro</button>
+            </form>
+          </section>
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Fila</p>
+                <h2>Reservas pendentes</h2>
+              </div>
+            </div>
+            <div class="reservation-list" id="listaReservas"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-clientes">
+        <div class="split-layout">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Cadastro</p>
+                <h2>Cliente</h2>
+              </div>
+            </div>
+            <form id="formCliente" class="form-grid">
+              <label>
+                Nome
+                <input type="text" id="nomeCliente" required>
+              </label>
+              <label>
+                Telefone
+                <input type="text" id="telefoneCliente" required>
+              </label>
+            <label>
+              Codigo
+              <input type="text" id="codigoCliente" placeholder="Opcional">
+            </label>
+              <div class="button-row">
+                <button type="submit" class="primary-action" id="btnSalvarCliente">Salvar cliente</button>
+                <button type="button" class="ghost-button hidden" id="btnCancelarEdicaoCliente">Cancelar edicao</button>
+              </div>
+            </form>
+          </section>
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Relacionamento</p>
+                <h2>Clientes cadastrados</h2>
+              </div>
+            </div>
+            <div class="client-list" id="listaClientes"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-whatsapp">
+        <div class="split-layout">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Divulgacao</p>
+                <h2>Livro da semana</h2>
+              </div>
+            </div>
+            <form class="form-grid" id="formLivroSemana">
+              <label>
+                Livro
+                <select id="livroSemana"></select>
+              </label>
+              <label>
+                Mensagem
+                <textarea id="mensagemSemana" rows="8"></textarea>
+              </label>
+              <div class="button-row">
+                <button type="button" class="secondary-action" id="btnGerarMensagemSemana">Gerar mensagem</button>
+                <button type="button" class="primary-action" id="btnWhatsAppProximo">Abrir proximo</button>
+              </div>
+              <p class="scanner-help" id="statusWhatsapp">Escolha um livro e abra o WhatsApp dos clientes com telefone cadastrado.</p>
+            </form>
+          </section>
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Clientes</p>
+                <h2>Enviar por WhatsApp</h2>
+              </div>
+              <span class="status-pill" id="totalClientesWhatsapp">0 clientes</span>
+            </div>
+            <div class="client-list" id="listaWhatsappClientes"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-relatorios">
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Analise</p>
+              <h2>Vendas e clientes</h2>
+            </div>
+            <div class="report-filters">
+              <select id="filtroRelatorioPeriodo" title="Periodo">
+                <option value="todos">Todo o historico</option>
+                <option value="hoje">Hoje</option>
+                <option value="7">Ultimos 7 dias</option>
+                <option value="30">Ultimos 30 dias</option>
+                <option value="mes">Este mes</option>
+              </select>
+              <input type="search" id="filtroRelatorioTexto" placeholder="Filtrar livro ou cliente">
+            </div>
+          </div>
+          <div class="report-summary" id="resumoRelatorio"></div>
+        </section>
+
+        <div class="split-layout">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Ranking</p>
+                <h2>Livros mais vendidos</h2>
+              </div>
+            </div>
+            <div class="ranking-list" id="rankingLivros"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Ranking</p>
+                <h2>Clientes que mais compram</h2>
+              </div>
+            </div>
+            <div class="ranking-list" id="rankingClientes"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-acerto">
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Consignacao</p>
+              <h2>Acerto com a livraria</h2>
+            </div>
+            <div class="button-row compact-actions">
+              <button type="button" class="primary-action" id="btnFecharAcerto">Fechar acerto</button>
+              <span class="status-pill" id="resumoAcerto">0 itens</span>
+            </div>
+          </div>
+          <div class="settlement-summary" id="resumoConsignacao"></div>
+          <div class="inventory-table" id="listaAcerto"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Arquivo</p>
+              <h2>Acertos fechados</h2>
+            </div>
+          </div>
+          <div class="history-list" id="listaAcertosFechados"></div>
+        </section>
+      </section>
+
+      <section class="tab-panel" id="tab-historico">
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Movimento</p>
+              <h2>Historico</h2>
+            </div>
+            <button type="button" class="ghost-button" id="btnExportar">Exportar CSV</button>
+          </div>
+          <div class="history-list" id="listaHistorico"></div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <section class="scanner-modal hidden" id="scannerModal" aria-label="Leitor de codigo">
+    <div class="scanner-panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Scanner</p>
+          <h2>Aponte para o codigo do livro</h2>
+        </div>
+        <button type="button" class="ghost-button" id="btnFecharScanner">Fechar</button>
+      </div>
+      <div class="scanner-frame">
+        <div id="reader"></div>
+        <div class="scan-line"></div>
+      </div>
+      <p class="scanner-help" id="scannerStatus">A camera sera usada apenas para ler o codigo.</p>
+    </div>
   </section>
 
-  <!-- ========== CONTEÚDO PRINCIPAL ========== -->
-  <section id="conteudoSistema">
-    <h2>Bem-vindo, <span id="usuarioLogado"></span>! <button onclick="logout()">Sair</button></h2>
-
-    <!-- Caixa -->
-    <h3>Caixa: <span id="caixaTotal">€ 0.00</span></h3>
-
-    <!-- Painel de Estatísticas -->
-    <section id="painelEstatisticas" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 20px; border-radius: 10px;">
-      <h2>Painel de Estatísticas</h2>
-      <div>
-        <h3>Livros Mais Emprestados</h3>
-        <ul id="listaLivrosMaisEmprestados"></ul>
+  <button type="button" class="calc-fab" id="btnAbrirCalc" title="Calculadora">Calc</button>
+  <aside class="calc-drawer hidden" id="calcDrawer" aria-label="Calculadora">
+    <div class="calc-panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Balcon</p>
+          <h2>Calculadora</h2>
+        </div>
+        <button type="button" class="ghost-button" id="btnFecharCalc">Fechar</button>
       </div>
-      <div>
-        <h3>Vendas do Dia</h3>
-        <p id="totalVendasDia">€ 0.00</p>
+      <input type="text" id="calcDisplay" class="calc-display" value="0" readonly>
+      <div class="calc-grid">
+        <button type="button" data-calc="C">C</button>
+        <button type="button" data-calc="back">Del</button>
+        <button type="button" data-calc="/">/</button>
+        <button type="button" data-calc="*">*</button>
+        <button type="button" data-calc="7">7</button>
+        <button type="button" data-calc="8">8</button>
+        <button type="button" data-calc="9">9</button>
+        <button type="button" data-calc="-">-</button>
+        <button type="button" data-calc="4">4</button>
+        <button type="button" data-calc="5">5</button>
+        <button type="button" data-calc="6">6</button>
+        <button type="button" data-calc="+">+</button>
+        <button type="button" data-calc="1">1</button>
+        <button type="button" data-calc="2">2</button>
+        <button type="button" data-calc="3">3</button>
+        <button type="button" class="equals" data-calc="=">=</button>
+        <button type="button" class="wide" data-calc="0">0</button>
+        <button type="button" data-calc=".">.</button>
       </div>
-      <div>
-        <h3>Clientes Ativos (últimos 30 dias)</h3>
-        <p id="clientesAtivos">0</p>
-      </div>
-    </section>
+    </div>
+  </aside>
 
-    <!-- Cadastro de Cliente -->
-    <section id="cadastroClienteSection">
-      <h3>Cadastrar Cliente</h3>
-      <input type="text" id="nomeCliente" placeholder="Nome" />
-      <input type="text" id="telefoneCliente" placeholder="Telefone" />
-      <input type="text" id="codigoCliente" placeholder="Código (opcional)" />
-      <button onclick="cadastrarCliente()">Cadastrar</button>
-    </section>
-
-    <!-- Leitor de ISBN -->
-    <section id="leitorISBN">
-      <h3>Leitor de ISBN</h3>
-      <div id="isbnRow">
-        <input type="text" id="isbnLivro" placeholder="ISBN" />
-        <button type="button" onclick="buscarISBN()">Buscar dados</button>
-        <button type="button" onclick="startScanner()">Iniciar Scanner</button>
-        <button type="button" onclick="stopScanner()">Parar Scanner</button>
-      </div>
-      <div id="reader"></div>
-    </section>
-
-    <!-- Cadastro de Livro -->
-    <section id="cadastroLivroSection">
-      <h3>Cadastrar Livro</h3>
-      <img id="capaPreview" style="max-width:120px;border:1px solid #ccc;border-radius:4px;display:none">
-      <input type="text" id="tituloLivro" placeholder="Título" />
-      <input type="text" id="autorLivro" placeholder="Autor" />
-      <input type="text" id="generoLivro" placeholder="Gênero (ex: Romance, Cristianismo)" />
-      <input type="number" id="precoLivro" placeholder="Preço (€)" step="0.01" />
-      <input type="number" id="quantidadeLivro" placeholder="Quantidade" />
-      <input type="text" id="codigoLivro" placeholder="Código (opcional)" />
-      <button onclick="cadastrarLivro()">Cadastrar</button>
-    </section>
-
-    <!-- Empréstimo -->
-    <section>
-      <h3>Emprestar Livro</h3>
-      <select id="clienteEmprestimo"></select>
-      <select id="livroEmprestimo"></select>
-      <button onclick="emprestarLivro()">Emprestar</button>
-    </section>
-
-    <!-- Venda -->
-    <section>
-      <h3>Vender Livro</h3>
-      <select id="tituloVenda"></select>
-      <button onclick="venderLivro()">Vender</button>
-    </section>
-
-    <!-- Devolução de Empréstimo -->
-    <section>
-      <h3>Devolver Livro (Empréstimo)</h3>
-      <select id="clienteDevolucao"></select>
-      <select id="livroDevolucao"></select>
-      <button onclick="devolverLivroEmprestado()">Devolver</button>
-    </section>
-
-    <!-- Devolução de Venda -->
-    <section id="devolucaoVendaSection">
-      <h3>Devolver Livro (Venda)</h3>
-      <select id="tituloDevolucaoVenda"></select>
-      <button onclick="devolverLivroVendido()">Devolver com Reembolso</button>
-    </section>
-
-    <!-- Estoque -->
-    <section>
-      <h3>Estoque</h3>
-      <!-- ⚡ CONTROLES DE FILTRO/BUSCA --------------------------- -->
-<div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0">
-  <input id="buscaInput"  placeholder="Buscar título ou autor…" oninput="filtrarLivros()" />
-  <select id="generoFiltro" onchange="filtrarLivros()">
-    <option value="">— Todos os gêneros —</option>
-  </select>
-  <select id="dispoFiltro" onchange="filtrarLivros()">
-    <option value="">— Disponibilidade —</option>
-    <option value="sim">Só disponíveis</option>
-    <option value="nao">Só esgotados</option>
-  </select>
-
-  <button onclick="exportarJSON()">Exportar JSON</button>
-  <button onclick="exportarCSV()">Exportar CSV</button>
-</div>
-<!-- ------------------------------------------------------- -->
-<ul id="listaLivros"></ul>
-
-      <ul id="listaLivros"></ul>
-      <div id="estoqueDetalhado"></div>
-    </section>
-
-    <!-- Menus Dropdown -->
-    <section>
-      <h3 onclick="toggleDropdown('clientesDropdown')">Clientes ▼</h3>
-      <div id="clientesDropdown" class="dropdown-content"></div>
-
-      <h3 onclick="toggleDropdown('livrosDropdown')">Livros ▼</h3>
-      <div id="livrosDropdown" class="dropdown-content"></div>
-
-      <h3 onclick="toggleDropdown('historicoDropdown')">Histórico ▼</h3>
-      <div id="historicoDropdown" class="dropdown-content"></div>
-    </section>
-  </section>
-
-  <!-- Scripts principais -->
+  <div class="toast" id="toast" role="status"></div>
+  <script src="https://unpkg.com/html5-qrcode/html5-qrcode.min.js"></script>
+  <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
   <script src="script.js"></script>
-
   <script>
-    // Scanner QR Code
-    let html5QrCode = null;
-    let scannerRunning = false;
-
-    function startScanner() {
-      if (scannerRunning) return;
-
-      html5QrCode = new Html5Qrcode("reader");
-
-      const config = {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.UPC_A
-        ]
-      };
-
-      html5QrCode.start(
-        { facingMode: "environment" },
-        config,
-        (decodedText) => {
-          document.getElementById("isbnLivro").value = decodedText;
-          buscarISBN();
-          stopScanner();
-        },
-        (errorMessage) => {}
-      ).then(() => {
-        scannerRunning = true;
-      }).catch(err => {
-        console.error("Erro ao iniciar scanner:", err);
-      });
-    }
-
-    function stopScanner() {
-      if (!scannerRunning || !html5QrCode) return;
-
-      html5QrCode.stop()
-        .then(() => {
-          html5QrCode.clear();
-          document.getElementById("reader").innerHTML = "";
-          scannerRunning = false;
-        })
-        .catch(err => {
-          console.error("Erro ao parar scanner:", err);
-        });
-    }
-
-    // PWA: service worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js')
-          .then(r => console.log('Service Worker registrado', r))
-          .catch(e => console.error('Erro ao registrar SW:', e));
+        navigator.serviceWorker.register('./service-worker.js').catch(console.error);
       });
     }
-
-    // Função para atualizar o painel de estatísticas
-    function atualizarPainelEstatisticas() {
-      const clientes = JSON.parse(localStorage.getItem('clientes') || '[]');
-      const livros = JSON.parse(localStorage.getItem('livros') || '[]');
-      const empretimos =JSON.parse(localStorage.getItem('emprestimos') || '[]');
-    }
+  </script>
+</body>
+</html>
