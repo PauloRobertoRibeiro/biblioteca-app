@@ -762,10 +762,22 @@ label {
   background: #f7f0e5;
 }
 
-.mini-actions .danger-action {
-  color: #fff;
-  border-color: var(--danger);
-  background: var(--danger);
+.selected-row {
+  border-color: rgba(181, 69, 60, 0.45);
+  background: #fff2dd;
+}
+
+.select-row {
+  display: flex;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 8px;
+  color: var(--danger);
+}
+
+.select-row input {
+  width: auto;
+  min-height: auto;
 }
 
 .reservation-card,

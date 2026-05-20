@@ -97,6 +97,8 @@ let calcValor = "0";
 let whatsappIndice = 0;
 let livroEditandoId = "";
 let clienteEditandoId = "";
+let modoQuitarAtivo = false;
+let livrosSelecionadosQuitar = new Set();
 
 const $ = (id) => document.getElementById(id);
 
@@ -344,6 +346,9 @@ function bindEventos() {
   $("buscaLivro").addEventListener("input", renderizarBusca);
   $("buscaCliente").addEventListener("input", renderizarBuscaClientes);
   $("filtroEstoque").addEventListener("change", renderizarEstoque);
+  $("btnModoQuitar").addEventListener("click", iniciarModoQuitar);
+  $("btnConfirmarQuitarSelecionados").addEventListener("click", quitarLivrosSelecionados);
+  $("btnCancelarModoQuitar").addEventListener("click", cancelarModoQuitar);
   $("btnQuitarExemplos").addEventListener("click", quitarLivrosExemplo);
   $("livroSemana").addEventListener("change", gerarMensagemSemana);
   $("btnGerarMensagemSemana").addEventListener("click", gerarMensagemSemana);
@@ -1169,30 +1174,6 @@ function ajustarEstoque(id, delta) {
   renderizarTudo();
 }
 
-function quitarLivro(id) {
-  const livro = buscarLivroPorId(id);
-  if (!livro) return;
-
-  if (emprestimos.some((item) => item.livroId === id && item.status === "ativo")) {
-    avisar("Nao posso quitar: este livro tem emprestimo ativo.");
-    return;
-  }
-
-  if (reservas.some((item) => item.livroId === id && item.status === "pendente")) {
-    avisar("Nao posso quitar: este livro tem reserva pendente.");
-    return;
-  }
-
-  const ok = confirm(`Quitar/remover este livro da lista?\n\n${livro.titulo}`);
-  if (!ok) return;
-
-  livros = livros.filter((item) => item.id !== id);
-  historico.unshift(evento("estoque", `Livro quitado/removido: ${livro.titulo}`));
-  salvarDados();
-  renderizarTudo();
-  avisar("Livro quitado da lista.");
-}
-
 function quitarLivrosExemplo() {
   const exemplos = livros.filter((livro) => codigosLivrosExemplo.includes(livro.codigo));
   if (!exemplos.length) {
@@ -1209,6 +1190,66 @@ function quitarLivrosExemplo() {
   salvarDados();
   renderizarTudo();
   avisar("Livros de exemplo quitados.");
+}
+
+function iniciarModoQuitar() {
+  modoQuitarAtivo = true;
+  livrosSelecionadosQuitar = new Set();
+  atualizarControlesModoQuitar();
+  renderizarEstoque();
+  avisar("Selecione os livros que quer quitar.");
+}
+
+function cancelarModoQuitar() {
+  modoQuitarAtivo = false;
+  livrosSelecionadosQuitar = new Set();
+  atualizarControlesModoQuitar();
+  renderizarEstoque();
+}
+
+function alternarSelecaoQuitar(id, marcado) {
+  if (marcado) livrosSelecionadosQuitar.add(id);
+  else livrosSelecionadosQuitar.delete(id);
+  atualizarControlesModoQuitar();
+}
+
+function atualizarControlesModoQuitar() {
+  $("btnModoQuitar").classList.toggle("hidden", modoQuitarAtivo);
+  $("btnConfirmarQuitarSelecionados").classList.toggle("hidden", !modoQuitarAtivo);
+  $("btnCancelarModoQuitar").classList.toggle("hidden", !modoQuitarAtivo);
+  $("btnQuitarExemplos").classList.toggle("hidden", modoQuitarAtivo);
+  const total = livrosSelecionadosQuitar.size;
+  $("btnConfirmarQuitarSelecionados").textContent = total ? `Quitar selecionados (${total})` : "Quitar selecionados";
+}
+
+function quitarLivrosSelecionados() {
+  const selecionados = Array.from(livrosSelecionadosQuitar).map(buscarLivroPorId).filter(Boolean);
+  if (!selecionados.length) {
+    avisar("Selecione pelo menos um livro.");
+    return;
+  }
+
+  const bloqueados = selecionados.filter((livro) =>
+    emprestimos.some((item) => item.livroId === livro.id && item.status === "ativo") ||
+    reservas.some((item) => item.livroId === livro.id && item.status === "pendente")
+  );
+  if (bloqueados.length) {
+    avisar("Algum livro selecionado tem emprestimo ativo ou reserva pendente.");
+    return;
+  }
+
+  const ok = confirm(`Quitar ${selecionados.length} livro(s)?\n\n${selecionados.map((livro) => livro.titulo).join("\n")}`);
+  if (!ok) return;
+
+  const ids = new Set(selecionados.map((livro) => livro.id));
+  livros = livros.filter((livro) => !ids.has(livro.id));
+  historico.unshift(evento("estoque", `Livros quitados: ${selecionados.map((livro) => livro.titulo).join(", ")}`));
+  modoQuitarAtivo = false;
+  livrosSelecionadosQuitar = new Set();
+  atualizarControlesModoQuitar();
+  salvarDados();
+  renderizarTudo();
+  avisar("Livros quitados da lista.");
 }
 
 function renderizarTudo() {
@@ -1451,6 +1492,7 @@ function renderizarEmprestimos() {
 }
 
 function renderizarEstoque() {
+  atualizarControlesModoQuitar();
   const campoFiltro = $("filtroEstoque");
   const filtro = campoFiltro ? campoFiltro.value : "todos";
   let lista = [...livros];
@@ -1463,7 +1505,7 @@ function renderizarEstoque() {
   }
 
   $("listaEstoque").innerHTML = lista.length
-    ? `<div class="inventory-row header"><span>Livro</span><span>Preco</span><span>Estoque</span><span>Vendido</span><span>Reservas</span><span>Ajuste</span></div>${lista.map(linhaEstoque).join("")}`
+    ? `<div class="inventory-row header"><span>${modoQuitarAtivo ? "Quitar" : "Livro"}</span><span>Preco</span><span>Estoque</span><span>Vendido</span><span>Reservas</span><span>Ajuste</span></div>${lista.map(linhaEstoque).join("")}`
     : `<div class="empty-state">Nao ha itens para este filtro.</div>`;
 }
 
@@ -1857,9 +1899,11 @@ function cardClienteBusca(cliente) {
 
 function linhaEstoque(livro) {
   const reservado = reservas.filter((item) => item.livroId === livro.id && item.status === "pendente").length;
+  const selecionado = livrosSelecionadosQuitar.has(livro.id);
   return `
-    <article class="inventory-row">
+    <article class="inventory-row ${selecionado ? "selected-row" : ""}">
       <div>
+        ${modoQuitarAtivo ? `<label class="select-row"><input type="checkbox" ${selecionado ? "checked" : ""} onchange="alternarSelecaoQuitar('${livro.id}', this.checked)"> Quitar</label>` : ""}
         <strong>${escapeHtml(livro.titulo)}</strong>
         <div class="book-meta">${escapeHtml(livro.autor)} - ${escapeHtml(livro.codigo || "sem codigo")}</div>
       </div>
@@ -1871,7 +1915,6 @@ function linhaEstoque(livro) {
         <button type="button" title="Remover unidade" onclick="ajustarEstoque('${livro.id}', -1)">-</button>
         <button type="button" title="Adicionar unidade" onclick="ajustarEstoque('${livro.id}', 1)">+</button>
         <button type="button" title="Editar livro" onclick="editarLivro('${livro.id}')">Editar</button>
-        <button type="button" class="danger-action" title="Quitar livro" onclick="quitarLivro('${livro.id}')">Quitar</button>
       </div>
     </article>
   `;
