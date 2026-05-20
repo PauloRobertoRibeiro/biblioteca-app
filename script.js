@@ -22,6 +22,51 @@ const livrariasPadrao = [
 
 const livrariaInicial = livrariasPadrao[0].nome;
 
+const albaransProva = [
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781414335919", titulo: "Que buena pregunta", preco: 16.99, custo: 13.89, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781965296011", titulo: "Que es el evangelio", preco: 8.99, custo: 7.34, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781965296028", titulo: "Quien es Jesus", preco: 8.99, custo: 7.34, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781955682251", titulo: "365 Historias Biblicas para ninos", preco: 29.99, custo: 24.51, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781955182638", titulo: "40 dias de esperanza", preco: 7.99, custo: 6.53, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781955182645", titulo: "40 dias de gracia", preco: 7.99, custo: 6.53, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9788496551985", titulo: "AutoOlvido (bolsillo)", preco: 5.00, custo: 4.09, quantidade: 2 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781111111113", titulo: "BIBLIA Mi gran viaje azul creciendo", preco: 0.01, custo: 0.01, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9798893842920", titulo: "Biblia obsequios y premios RVR60 letra grande", preco: 14.99, custo: 12.25, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9780829756067", titulo: "Biblia Para Ninos: Historias de Jesus", preco: 18.99, custo: 15.52, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9798885160360", titulo: "Biblia RVR60 Tamano Manual Letra Grande", preco: 27.99, custo: 22.87, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9780966378672", titulo: "Como Pastorear el Corazon de su Hijo", preco: 13.99, custo: 11.44, quantidade: 2 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781955182010", titulo: "Conocer a Dios", preco: 14.99, custo: 12.25, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781087748658", titulo: "Creer - Serie Primeros pasos (bolsillo)", preco: 4.99, custo: 4.08, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781950417469", titulo: "Cultura & conexion", preco: 12.99, custo: 10.62, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781087748665", titulo: "Dios - Esta El ahi - Serie primeros pasos", preco: 4.99, custo: 4.08, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9788494322594", titulo: "Dioses que fallan", preco: 14.00, custo: 11.44, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781581027573", titulo: "Disciplinas de un hombre piadoso", preco: 13.99, custo: 11.43, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9788494503245", titulo: "Disparando contra Dios", preco: 17.00, custo: 13.90, quantidade: 2 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781400351848", titulo: "El caballo y el muchacho", preco: 9.99, custo: 8.17, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781400351831", titulo: "El leon, la bruja y el ropero", preco: 9.99, custo: 8.17, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781400351855", titulo: "El principe Caspian", preco: 9.99, custo: 8.17, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9780825410963", titulo: "El progreso del peregrino ilustrado", preco: 6.99, custo: 5.71, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9788415189923", titulo: "El significado del Matrimonio", preco: 17.00, custo: 13.90, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781087748740", titulo: "Guerra - Serie Primeros pasos (bolsillo)", preco: 4.99, custo: 4.08, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781087748733", titulo: "La Biblia: Podemos confiar en ella", preco: 4.99, custo: 4.08, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9798887791661", titulo: "La depresion: Encuentra a Cristo en las tinieblas", preco: 9.99, custo: 8.17, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9780825410482", titulo: "La pequena gran mujer en la China", preco: 5.99, custo: 4.90, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9780825458835", titulo: "Mentiras que las jovenes creen, Ed. Revisada", preco: 13.99, custo: 11.43, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781955182829", titulo: "Puro de corazon", preco: 12.99, custo: 10.62, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9788409343119", titulo: "Un ano de cambios", preco: 19.90, custo: 16.26, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781433692123", titulo: "Vivir con Integridad y Sabiduria", preco: 14.99, custo: 12.25, quantidade: 1 },
+  { origem: "Abba Libreria Cristiana", margemPercent: 15, codigo: "9781087748788", titulo: "Voces: A quien estoy escuchando", preco: 4.99, custo: 4.08, quantidade: 1 },
+  { origem: "Alfa Omega", margemPercent: 4, codigo: "00193", titulo: "Gloria del Cielo: La verdad acerca del cielo, los angeles y la vida eterna", preco: 5.99, custo: 5.76, quantidade: 1 },
+  { origem: "Alfa Omega", margemPercent: 4, codigo: "09300", titulo: "Lo que Jesus exige del mundo", preco: 16.00, custo: 15.38, quantidade: 1 },
+  { origem: "Alfa Omega", margemPercent: 4, codigo: "9781414333922", titulo: "Pacto Matrimonial: Perspectiva temporal y eterna", preco: 14.99, custo: 14.41, quantidade: 1 },
+  { origem: "Alfa Omega", margemPercent: 4, codigo: "9781944586805", titulo: "50 Preguntas Cruciales", preco: 9.99, custo: 9.61, quantidade: 1 },
+  { origem: "Alfa Omega", margemPercent: 4, codigo: "9780825419454", titulo: "Bajo las alas de Dios", preco: 9.99, custo: 9.61, quantidade: 1 },
+  { origem: "Alfa Omega", margemPercent: 4, codigo: "9780825458637", titulo: "Mentiras que las mujeres creen, version revisada", preco: 16.00, custo: 15.38, quantidade: 1 },
+  { origem: "Alfa Omega", margemPercent: 4, codigo: "10538", titulo: "Mentiras que las jovenes creen, edicion revisada", preco: 13.99, custo: 13.45, quantidade: 1 },
+  { origem: "Alfa Omega", margemPercent: 4, codigo: "9780825457029", titulo: "Como ser padres cristianos exitosos", preco: 12.99, custo: 12.49, quantidade: 1 },
+  { origem: "Alfa Omega", margemPercent: 4, codigo: "9781576588093", titulo: "Imbatible: La vida de Louis Zamperini", preco: 7.99, custo: 7.68, quantidade: 1 }
+];
+
 let usuarioAtual = null;
 let livros = carregar(storage.livros, []);
 let clientes = carregar(storage.clientes, []);
@@ -194,6 +239,57 @@ function livroExemplo(codigo, titulo, autor, editora, preco, quantidade, categor
   };
 }
 
+function importarAlbaransProva() {
+  const continuar = confirm("Carregar os livros lidos das fotos dos albaranes de Abba e Alfa Omega para teste?");
+  if (!continuar) return;
+
+  let novos = 0;
+  let atualizados = 0;
+
+  albaransProva.forEach((item) => {
+    const existente = livros.find((livro) => livro.codigo === item.codigo && normalizar(livro.origem) === normalizar(item.origem));
+    const dados = {
+      codigo: item.codigo,
+      titulo: item.titulo,
+      autor: "Catalogo albaran",
+      editora: item.origem,
+      categoria: "Albaran prova",
+      capa: capaPorIsbn(item.codigo),
+      preco: Number(item.preco || 0),
+      custo: Number(item.custo || item.preco || 0),
+      margemPercent: Number(item.margemPercent || 0),
+      quantidade: Number(item.quantidade || 1),
+      recebidos: Number(item.quantidade || 1),
+      origem: item.origem,
+      dataAcerto: dataAcertoPadrao()
+    };
+
+    if (existente) {
+      Object.assign(existente, dados);
+      atualizados += 1;
+      return;
+    }
+
+    livros.unshift({
+      id: cryptoId(),
+      ...dados,
+      vendidos: 0,
+      devolvidos: 0,
+      criadoEm: new Date().toISOString()
+    });
+    novos += 1;
+  });
+
+  guardarLivrariaAtual(livrariaInicial);
+  $("origemLivro").value = livrariaInicial;
+  aplicarPadraoLivraria();
+  historico.unshift(evento("entrada", `Albarans de prova carregados: ${novos} novo(s), ${atualizados} atualizado(s).`));
+  salvarDados();
+  renderizarTudo();
+  ativarTab("estoque");
+  avisar("Albarans de prova carregados.");
+}
+
 function bindEventos() {
   $("loginForm").addEventListener("submit", fazerLogin);
   $("logoutBtn").addEventListener("click", logout);
@@ -208,6 +304,7 @@ function bindEventos() {
   $("btnEscanear").addEventListener("click", abrirScanner);
   $("btnSemCodigo").addEventListener("click", usarLivroSemCodigo);
   $("btnBuscarIsbn").addEventListener("click", preencherLivroPeloCodigo);
+  $("btnImportarAlbarans").addEventListener("click", importarAlbaransProva);
   $("btnFocoBusca").addEventListener("click", focarBusca);
   $("btnFocoDevolucao").addEventListener("click", focarDevolucao);
   $("btnVerBaixoEstoque").addEventListener("click", verBaixoEstoque);
