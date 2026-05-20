@@ -327,6 +327,14 @@ label {
   gap: 12px;
 }
 
+.albaran-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.csv-import {
+  margin: 12px 0;
+}
+
 .client-profile {
   display: grid;
   gap: 8px;
@@ -966,6 +974,7 @@ label {
   .metrics,
   .workbench,
   .split-layout,
+  .albaran-grid,
   .catalog-form {
     grid-template-columns: 1fr 1fr;
   }
@@ -1018,6 +1027,7 @@ label {
   }
 
   .catalog-form,
+  .albaran-grid,
   .button-row,
   .report-filters {
     grid-template-columns: 1fr;

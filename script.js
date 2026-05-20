@@ -12,7 +12,8 @@ const storage = {
   reservas: "reservas",
   vendas: "vendas",
   acertos: "acertos",
-  livrariaAtual: "livrariaAtual"
+  livrariaAtual: "livrariaAtual",
+  albaranAtual: "albaranAtual"
 };
 
 const livrariasPadrao = [
@@ -107,6 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
   criarDadosExemplo();
   bindEventos();
   $("origemLivro").value = livrariaAtual();
+  carregarContextoAlbaran();
   aplicarPadraoLivraria();
   $("dataAcertoLivro").value = $("dataAcertoLivro").value || dataAcertoPadrao();
   renderizarTudo();
@@ -150,6 +152,8 @@ function normalizarDadosAntigos() {
     vendidos: Number(livro.vendidos || 0),
     devolvidos: Number(livro.devolvidos || 0),
     origem: livro.origem || livrariaInicial,
+    albaranNumero: livro.albaranNumero || "",
+    albaranData: livro.albaranData || "",
     dataAcerto: livro.dataAcerto || dataAcertoPadrao(),
     criadoEm: livro.criadoEm || new Date().toISOString()
   }));
@@ -243,6 +247,8 @@ function livroExemplo(codigo, titulo, autor, editora, preco, quantidade, categor
     vendidos: 0,
     devolvidos: 0,
     origem: livrariaInicial,
+    albaranNumero: "",
+    albaranData: "",
     dataAcerto: dataAcertoPadrao(),
     criadoEm: new Date().toISOString()
   };
@@ -299,6 +305,93 @@ function importarAlbaransProva() {
   avisar("Albarans de prova carregados.");
 }
 
+function importarCsvAlbaran() {
+  const texto = $("csvAlbaran").value.trim();
+  if (!texto) {
+    avisar("Cole linhas CSV para importar.");
+    return;
+  }
+
+  const contexto = contextoAlbaranAtual();
+  const linhas = texto.split(/\r?\n/).map((linha) => linha.trim()).filter(Boolean);
+  let novos = 0;
+  let atualizados = 0;
+
+  linhas.forEach((linha, indice) => {
+    const separador = linha.includes(";") ? ";" : linha.includes("\t") ? "\t" : ",";
+    const partes = linha.split(separador).map((parte) => parte.trim());
+    if (partes.length < 4) return;
+    if (indice === 0 && normalizar(partes.join(" ")).includes("titulo")) return;
+
+    const [codigo, titulo, pvp, importe, quantidade = "1", livraria = contexto.livraria, margem = ""] = partes;
+    const item = {
+      codigo: limparCodigo(codigo) || `CSV-${Date.now()}-${indice}`,
+      titulo: titulo || "Livro sem titulo",
+      autor: "Catalogo albaran",
+      editora: livraria || contexto.livraria,
+      categoria: "Albaran",
+      preco: parseNumero(pvp),
+      custo: parseNumero(importe),
+      margemPercent: margem ? parseNumero(margem) : descontoPadraoLivraria(livraria || contexto.livraria),
+      quantidade: Math.max(1, parseNumero(quantidade) || 1),
+      origem: livraria || contexto.livraria,
+      albaranNumero: contexto.numero,
+      albaranData: contexto.data
+    };
+
+    if (!item.titulo || !Number.isFinite(item.preco) || !Number.isFinite(item.custo)) return;
+    const resultado = salvarLivroImportado(item);
+    if (resultado === "novo") novos += 1;
+    if (resultado === "atualizado") atualizados += 1;
+  });
+
+  if (!novos && !atualizados) {
+    avisar("Nao consegui ler nenhuma linha valida.");
+    return;
+  }
+
+  historico.unshift(evento("entrada", `CSV de albaran importado: ${novos} novo(s), ${atualizados} atualizado(s).`));
+  salvarDados();
+  renderizarTudo();
+  ativarTab("estoque");
+  avisar("CSV importado.");
+}
+
+function salvarLivroImportado(item) {
+  const existente = livros.find((livro) => livro.codigo === item.codigo && normalizar(livro.origem) === normalizar(item.origem));
+  const dados = {
+    codigo: item.codigo,
+    titulo: item.titulo,
+    autor: item.autor || "Catalogo albaran",
+    editora: item.editora || item.origem,
+    categoria: item.categoria || "Albaran",
+    capa: capaPorIsbn(item.codigo),
+    preco: Number(item.preco || 0),
+    custo: Number(item.custo || item.preco || 0),
+    margemPercent: Number(item.margemPercent || 0),
+    quantidade: Number(item.quantidade || 1),
+    recebidos: Number(item.quantidade || 1),
+    origem: item.origem,
+    albaranNumero: item.albaranNumero || "",
+    albaranData: item.albaranData || "",
+    dataAcerto: dataAcertoPadrao()
+  };
+
+  if (existente) {
+    Object.assign(existente, dados);
+    return "atualizado";
+  }
+
+  livros.unshift({
+    id: cryptoId(),
+    ...dados,
+    vendidos: 0,
+    devolvidos: 0,
+    criadoEm: new Date().toISOString()
+  });
+  return "novo";
+}
+
 function bindEventos() {
   $("loginForm").addEventListener("submit", fazerLogin);
   $("logoutBtn").addEventListener("click", logout);
@@ -314,11 +407,19 @@ function bindEventos() {
   $("btnSemCodigo").addEventListener("click", usarLivroSemCodigo);
   $("btnBuscarIsbn").addEventListener("click", preencherLivroPeloCodigo);
   $("btnImportarAlbarans").addEventListener("click", importarAlbaransProva);
+  $("btnImportarCsvAlbaran").addEventListener("click", importarCsvAlbaran);
+  $("btnLimparCsvAlbaran").addEventListener("click", () => {
+    $("csvAlbaran").value = "";
+  });
+  ["albaranNumero", "albaranData", "albaranLivraria"].forEach((id) => {
+    $(id).addEventListener("input", salvarContextoAlbaran);
+  });
   $("btnFocoBusca").addEventListener("click", focarBusca);
   $("btnFocoDevolucao").addEventListener("click", focarDevolucao);
   $("btnVerBaixoEstoque").addEventListener("click", verBaixoEstoque);
   $("btnToggleCaixa").addEventListener("click", toggleCaixa);
   $("btnFecharAcerto").addEventListener("click", fecharAcerto);
+  $("btnExportarAcerto").addEventListener("click", exportarAcertoCsv);
   $("reservaCliente").addEventListener("change", preencherTelefoneReserva);
   $("btnClienteRapidoReserva").addEventListener("click", clienteRapido);
   $("precoLivro").addEventListener("input", sugerirRepasse);
@@ -357,6 +458,9 @@ function bindEventos() {
   $("filtroRelatorioPeriodo").addEventListener("change", renderizarRelatorios);
   $("filtroRelatorioTexto").addEventListener("input", renderizarRelatorios);
   $("btnExportar").addEventListener("click", exportarHistorico);
+  $("btnExportarBackup").addEventListener("click", exportarBackup);
+  $("btnImportarBackup").addEventListener("click", () => $("arquivoBackup").click());
+  $("arquivoBackup").addEventListener("change", importarBackup);
 
   document.querySelectorAll(".tab").forEach((button) => {
     button.addEventListener("click", () => ativarTab(button.dataset.tab));
@@ -406,13 +510,14 @@ function cadastrarLivro(event) {
   const editora = $("editoraLivro").value.trim();
   const categoria = $("categoriaLivro").value.trim() || "Geral";
   const capa = $("capaLivro").value.trim() || capaPorIsbn(codigo);
-  const preco = Number($("precoLivro").value);
-  const quantidade = Number($("quantidadeLivro").value);
+  const preco = parseNumero($("precoLivro").value);
+  const quantidade = parseNumero($("quantidadeLivro").value);
   const origem = $("origemLivro").value.trim() || livrariaAtual();
   guardarLivrariaAtual(origem);
-  const margemPercent = Number($("margemLivro").value || descontoPadraoLivraria(origem) || 0);
-  const custo = Number($("custoLivro").value || calcularRepasse(preco, margemPercent));
+  const margemPercent = parseNumero($("margemLivro").value || descontoPadraoLivraria(origem) || 0);
+  const custo = parseNumero($("custoLivro").value || calcularRepasse(preco, margemPercent));
   const dataAcerto = $("dataAcertoLivro").value || dataAcertoPadrao();
+  const contextoAlbaran = contextoAlbaranAtual(origem);
 
   if (!titulo || !autor || !Number.isFinite(preco) || !Number.isFinite(custo) || !Number.isFinite(margemPercent) || quantidade < 1) {
     avisar("Preencha titulo, autor, preco, repasse e quantidade.");
@@ -436,6 +541,8 @@ function cadastrarLivro(event) {
     existente.categoria = categoria;
     existente.capa = capa || existente.capa;
     existente.origem = origem;
+    existente.albaranNumero = contextoAlbaran.numero;
+    existente.albaranData = contextoAlbaran.data;
     existente.dataAcerto = dataAcerto;
     historico.unshift(evento(livroEditando ? "estoque" : "entrada", livroEditando
       ? `Livro editado: ${titulo}`
@@ -457,6 +564,8 @@ function cadastrarLivro(event) {
       vendidos: 0,
       devolvidos: 0,
       origem,
+      albaranNumero: contextoAlbaran.numero,
+      albaranData: contextoAlbaran.data,
       dataAcerto,
       criadoEm: new Date().toISOString()
     });
@@ -1440,6 +1549,10 @@ function sugerirRepasse() {
 function aplicarPadraoLivraria() {
   const origem = $("origemLivro").value.trim() || livrariaAtual();
   $("origemLivro").value = origem;
+  if ($("albaranLivraria")) {
+    $("albaranLivraria").value = origem;
+    salvarContextoAlbaran();
+  }
   guardarLivrariaAtual(origem);
   const margem = descontoPadraoLivraria(origem);
   if (Number.isFinite(margem)) {
@@ -1449,8 +1562,8 @@ function aplicarPadraoLivraria() {
 }
 
 function atualizarRepasseAutomatico(forcar) {
-  const preco = Number($("precoLivro").value);
-  const margem = Number($("margemLivro").value || descontoPadraoLivraria($("origemLivro").value || livrariaAtual()) || 0);
+  const preco = parseNumero($("precoLivro").value);
+  const margem = parseNumero($("margemLivro").value || descontoPadraoLivraria($("origemLivro").value || livrariaAtual()) || 0);
   const custoManual = $("custoLivro").dataset.manual === "true";
 
   if (!Number.isFinite(preco) || preco <= 0 || !Number.isFinite(margem)) return;
@@ -1921,11 +2034,12 @@ function linhaEstoque(livro) {
 }
 
 function linhaAcerto(livro) {
+  const documento = livro.albaranNumero ? ` - alb. ${livro.albaranNumero}` : "";
   return `
     <article class="settlement-row">
       <div>
         <strong>${escapeHtml(livro.titulo)}</strong>
-        <div class="book-meta">${escapeHtml(livro.codigo || "sem codigo")} - ${margemPorLivro(livro).toFixed(2)}% ganho</div>
+        <div class="book-meta">${escapeHtml(livro.codigo || "sem codigo")}${escapeHtml(documento)} - ${margemPorLivro(livro).toFixed(2)}% ganho</div>
       </div>
       <span>${escapeHtml(livro.origem || livrariaInicial)}</span>
       <span>${Number(livro.vendidos || 0)}</span>
@@ -1967,6 +2081,102 @@ function exportarHistorico() {
   link.download = "historico-biblioteca.csv";
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function exportarBackup() {
+  const dados = {
+    versao: 1,
+    exportadoEm: new Date().toISOString(),
+    livros,
+    clientes,
+    emprestimos,
+    reservas,
+    vendas,
+    acertos,
+    historico,
+    caixa,
+    livrariaAtual: livrariaAtual(),
+    albaranAtual: contextoAlbaranAtual()
+  };
+  baixarArquivo(JSON.stringify(dados, null, 2), `backup-biblioteca-${new Date().toISOString().slice(0, 10)}.json`, "application/json");
+}
+
+function importarBackup(event) {
+  const arquivo = event.target.files && event.target.files[0];
+  if (!arquivo) return;
+
+  const leitor = new FileReader();
+  leitor.onload = () => {
+    try {
+      const dados = JSON.parse(leitor.result);
+      if (!Array.isArray(dados.livros) || !Array.isArray(dados.clientes)) {
+        throw new Error("Backup invalido");
+      }
+      const ok = confirm("Importar backup e substituir os dados deste dispositivo?");
+      if (!ok) return;
+
+      livros = dados.livros || [];
+      clientes = dados.clientes || [];
+      emprestimos = dados.emprestimos || [];
+      reservas = dados.reservas || [];
+      vendas = dados.vendas || [];
+      acertos = dados.acertos || [];
+      historico = dados.historico || [];
+      caixa = Number(dados.caixa || 0);
+      if (dados.livrariaAtual) guardarLivrariaAtual(dados.livrariaAtual);
+      if (dados.albaranAtual) localStorage.setItem(storage.albaranAtual, JSON.stringify(dados.albaranAtual));
+      normalizarDadosAntigos();
+      carregarContextoAlbaran();
+      salvarDados();
+      renderizarTudo();
+      avisar("Backup importado.");
+    } catch {
+      avisar("Nao consegui importar este backup.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+  leitor.readAsText(arquivo);
+}
+
+function exportarAcertoCsv() {
+  const lista = livros.filter((livro) => Number(livro.recebidos || 0) > 0 || Number(livro.vendidos || 0) > 0 || Number(livro.devolvidos || 0) > 0);
+  if (!lista.length) {
+    avisar("Nao ha acerto para exportar.");
+    return;
+  }
+
+  const linhas = [
+    ["livraria", "albaran", "data_albaran", "codigo", "titulo", "vendidos", "estoque", "devolvidos", "pvp", "pagar_livraria", "ganho"],
+    ...lista.map((livro) => [
+      livro.origem || livrariaInicial,
+      livro.albaranNumero || "",
+      livro.albaranData || "",
+      livro.codigo || "",
+      livro.titulo || "",
+      Number(livro.vendidos || 0),
+      Number(livro.quantidade || 0),
+      Number(livro.devolvidos || 0),
+      Number(livro.preco || 0).toFixed(2),
+      valorPagarLivro(livro).toFixed(2),
+      lucroLivro(livro).toFixed(2)
+    ])
+  ];
+  baixarArquivo(csvDeLinhas(linhas), `acerto-biblioteca-${new Date().toISOString().slice(0, 10)}.csv`, "text/csv;charset=utf-8");
+}
+
+function baixarArquivo(conteudo, nome, tipo) {
+  const blob = new Blob([conteudo], { type: tipo });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = nome;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function csvDeLinhas(linhas) {
+  return linhas.map((linha) => linha.map((campo) => `"${String(campo ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
 }
 
 function evento(tipo, texto) {
@@ -2056,6 +2266,10 @@ function editarLivro(id) {
   $("margemLivro").value = Number.isFinite(Number(livro.margemPercent)) ? Number(livro.margemPercent) : margemPorValores(livro.preco, livro.custo || livro.preco);
   $("quantidadeLivro").value = Number(livro.quantidade || 0);
   $("origemLivro").value = livro.origem || livrariaAtual();
+  $("albaranNumero").value = livro.albaranNumero || "";
+  $("albaranData").value = livro.albaranData || "";
+  $("albaranLivraria").value = livro.origem || livrariaAtual();
+  salvarContextoAlbaran();
   $("dataAcertoLivro").value = livro.dataAcerto || dataAcertoPadrao();
   $("capaLivro").value = livro.capa || "";
   renderizarCapa(livro.capa || "");
@@ -2150,6 +2364,31 @@ function guardarLivrariaAtual(origem) {
   if (valor) localStorage.setItem(storage.livrariaAtual, valor);
 }
 
+function carregarContextoAlbaran() {
+  const salvo = carregar(storage.albaranAtual, {});
+  $("albaranNumero").value = salvo.numero || "";
+  $("albaranData").value = salvo.data || new Date().toISOString().slice(0, 10);
+  $("albaranLivraria").value = salvo.livraria || livrariaAtual();
+  $("origemLivro").value = $("albaranLivraria").value;
+}
+
+function salvarContextoAlbaran() {
+  const contexto = contextoAlbaranAtual();
+  localStorage.setItem(storage.albaranAtual, JSON.stringify(contexto));
+  if (contexto.livraria) {
+    guardarLivrariaAtual(contexto.livraria);
+    $("origemLivro").value = contexto.livraria;
+  }
+}
+
+function contextoAlbaranAtual(livrariaFallback) {
+  return {
+    numero: $("albaranNumero") ? $("albaranNumero").value.trim() : "",
+    data: $("albaranData") ? $("albaranData").value : "",
+    livraria: ($("albaranLivraria") ? $("albaranLivraria").value.trim() : "") || livrariaFallback || livrariaAtual()
+  };
+}
+
 function resumoLivrariasAcerto(lista) {
   const grupos = new Map();
   lista.forEach((livro) => {
@@ -2207,6 +2446,16 @@ function dataAcertoPadrao() {
 
 function formatarMoeda(valor) {
   return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(valor || 0);
+}
+
+function parseNumero(valor) {
+  if (typeof valor === "number") return valor;
+  const texto = String(valor || "").trim().replace(/\s/g, "");
+  if (!texto) return 0;
+  if (texto.includes(",") && texto.includes(".")) {
+    return Number(texto.replace(/\./g, "").replace(",", "."));
+  }
+  return Number(texto.replace(",", "."));
 }
 
 function formatarData(data) {

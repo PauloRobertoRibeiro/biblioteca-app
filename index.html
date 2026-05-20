@@ -203,6 +203,37 @@
       </section>
 
       <section class="tab-panel" id="tab-entrada">
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Documento</p>
+              <h2>Entrada por albaran/fatura</h2>
+            </div>
+          </div>
+          <div class="form-grid albaran-grid">
+            <label>
+              Numero
+              <input type="text" id="albaranNumero" placeholder="Ex: 870687 ou S00626">
+            </label>
+            <label>
+              Data
+              <input type="date" id="albaranData">
+            </label>
+            <label>
+              Livraria
+              <input type="text" id="albaranLivraria" list="listaLivrarias" placeholder="Abba Libreria Cristiana ou Alfa Omega">
+            </label>
+          </div>
+          <label class="csv-import">
+            Importar linhas CSV
+            <textarea id="csvAlbaran" rows="5" placeholder="codigo;titulo;pvp;importe;quantidade&#10;978...;Titulo;8,99;7,34;1"></textarea>
+          </label>
+          <div class="button-row">
+            <button type="button" class="secondary-action" id="btnImportarCsvAlbaran">Importar CSV</button>
+            <button type="button" class="ghost-button" id="btnLimparCsvAlbaran">Limpar CSV</button>
+          </div>
+        </section>
+
         <section class="panel compact-panel">
           <div class="panel-header">
             <div>
@@ -247,15 +278,15 @@
             </label>
             <label>
               Preco
-              <input type="number" id="precoLivro" min="0" step="0.01" required>
+              <input type="text" id="precoLivro" inputmode="decimal" required>
             </label>
             <label>
               Pagar a livraria
-              <input type="number" id="custoLivro" min="0" step="0.01" placeholder="Valor de repasse">
+              <input type="text" id="custoLivro" inputmode="decimal" placeholder="Valor de repasse">
             </label>
             <label>
               Ganho / desconto %
-              <input type="number" id="margemLivro" min="0" max="100" step="0.01" placeholder="Ex: 15">
+              <input type="text" id="margemLivro" inputmode="decimal" placeholder="Ex: 15">
             </label>
             <label>
               Quantidade
@@ -465,6 +496,7 @@
             </div>
             <div class="button-row compact-actions">
               <button type="button" class="primary-action" id="btnFecharAcerto">Fechar acerto</button>
+              <button type="button" class="ghost-button" id="btnExportarAcerto">Exportar acerto CSV</button>
               <span class="status-pill" id="resumoAcerto">0 itens</span>
             </div>
           </div>
@@ -490,6 +522,9 @@
               <h2>Historico</h2>
             </div>
             <button type="button" class="ghost-button" id="btnExportar">Exportar CSV</button>
+            <button type="button" class="ghost-button" id="btnExportarBackup">Exportar backup</button>
+            <button type="button" class="ghost-button" id="btnImportarBackup">Importar backup</button>
+            <input type="file" id="arquivoBackup" class="hidden" accept="application/json">
           </div>
           <div class="history-list" id="listaHistorico"></div>
         </section>
