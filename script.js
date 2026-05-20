@@ -658,14 +658,25 @@ function lerCodigoArquivoComZxing(arquivo) {
 function agendarBuscaPorCodigo() {
   window.clearTimeout(buscaCodigoTimer);
   const codigo = limparCodigo($("codigoLivro").value);
-  if (codigo.length < 8) return;
-  atualizarStatusIsbn("Codigo recebido. Buscando dados...");
-  buscaCodigoTimer = window.setTimeout(preencherLivroPeloCodigo, 450);
+  if (!codigo) {
+    atualizarStatusIsbn("Leia o ISBN no campo acima para preencher automaticamente.");
+    return;
+  }
+  if (!codigoProntoParaBusca(codigo)) {
+    atualizarStatusIsbn(`Digitando codigo... ${codigo.length}/13`);
+    return;
+  }
+  atualizarStatusIsbn("ISBN completo. Buscando dados...");
+  buscaCodigoTimer = window.setTimeout(preencherLivroPeloCodigo, 700);
 }
 
 async function preencherLivroPeloCodigo() {
   const codigo = limparCodigo($("codigoLivro").value);
   if (!codigo) return;
+  if (!codigoProntoParaBusca(codigo)) {
+    atualizarStatusIsbn("Complete o ISBN ou clique em Buscar ISBN quando terminar.");
+    return;
+  }
   $("codigoLivro").value = codigo;
 
   const livro = livros.find((item) => item.codigo === codigo);
@@ -692,6 +703,11 @@ async function preencherLivroPeloCodigo() {
   $("quantidadeLivro").focus();
   atualizarStatusIsbn("Livro ja existe no estoque. Confirme a quantidade.");
   avisar("Livro encontrado. Confirme a quantidade para adicionar ao estoque.");
+}
+
+function codigoProntoParaBusca(codigo) {
+  if (codigo.startsWith("ANTIGO-")) return true;
+  return codigo.length === 10 || codigo.length === 13;
 }
 
 function preencherFormularioLivro(livro) {
