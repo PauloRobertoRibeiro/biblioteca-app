@@ -14,6 +14,11 @@ const storage = {
   acertos: "acertos"
 };
 
+const livrariasPadrao = [
+  { nome: "Abba Libreria Cristiana", margem: 15 },
+  { nome: "Alfa Omega", margem: 4 }
+];
+
 let usuarioAtual = null;
 let livros = carregar(storage.livros, []);
 let clientes = carregar(storage.clientes, []);
@@ -78,6 +83,9 @@ function normalizarDadosAntigos() {
     capa: livro.capa || capaPorIsbn(livro.codigo),
     preco: Number(livro.preco || 0),
     custo: Number(livro.custo || livro.preco || 0),
+    margemPercent: Number.isFinite(Number(livro.margemPercent))
+      ? Number(livro.margemPercent)
+      : margemPorValores(livro.preco, livro.custo || livro.preco),
     quantidade: Number(livro.quantidade || 0),
     recebidos: Number(livro.recebidos || (Number(livro.quantidade || 0) + Number(livro.vendidos || 0) + Number(livro.devolvidos || 0))),
     vendidos: Number(livro.vendidos || 0),
@@ -168,6 +176,7 @@ function livroExemplo(codigo, titulo, autor, editora, preco, quantidade, categor
     editora,
     preco,
     custo: preco,
+    margemPercent: 0,
     quantidade,
     recebidos: quantidade,
     categoria,
@@ -202,6 +211,11 @@ function bindEventos() {
   $("reservaCliente").addEventListener("change", preencherTelefoneReserva);
   $("btnClienteRapidoReserva").addEventListener("click", clienteRapido);
   $("precoLivro").addEventListener("input", sugerirRepasse);
+  $("origemLivro").addEventListener("input", aplicarPadraoLivraria);
+  $("margemLivro").addEventListener("input", () => atualizarRepasseAutomatico(true));
+  $("custoLivro").addEventListener("input", () => {
+    $("custoLivro").dataset.manual = "true";
+  });
   $("btnAbrirCalc").addEventListener("click", abrirCalculadora);
   $("btnFecharCalc").addEventListener("click", fecharCalculadora);
   document.querySelectorAll("[data-calc]").forEach((button) => {
@@ -278,12 +292,13 @@ function cadastrarLivro(event) {
   const categoria = $("categoriaLivro").value.trim() || "Geral";
   const capa = $("capaLivro").value.trim() || capaPorIsbn(codigo);
   const preco = Number($("precoLivro").value);
-  const custo = Number($("custoLivro").value || preco);
   const quantidade = Number($("quantidadeLivro").value);
   const origem = $("origemLivro").value.trim() || "Livraria parceira";
+  const margemPercent = Number($("margemLivro").value || descontoPadraoLivraria(origem) || 0);
+  const custo = Number($("custoLivro").value || calcularRepasse(preco, margemPercent));
   const dataAcerto = $("dataAcertoLivro").value || dataAcertoPadrao();
 
-  if (!titulo || !autor || !Number.isFinite(preco) || !Number.isFinite(custo) || quantidade < 1) {
+  if (!titulo || !autor || !Number.isFinite(preco) || !Number.isFinite(custo) || !Number.isFinite(margemPercent) || quantidade < 1) {
     avisar("Preencha titulo, autor, preco, repasse e quantidade.");
     return;
   }
@@ -298,6 +313,7 @@ function cadastrarLivro(event) {
     existente.recebidos = Math.max(0, Number(existente.recebidos || 0) + deltaQuantidade);
     existente.preco = preco;
     existente.custo = custo;
+    existente.margemPercent = margemPercent;
     existente.titulo = titulo;
     existente.autor = autor;
     existente.editora = editora;
@@ -319,6 +335,7 @@ function cadastrarLivro(event) {
       capa,
       preco,
       custo,
+      margemPercent,
       quantidade,
       recebidos: quantidade,
       vendidos: 0,
@@ -333,6 +350,8 @@ function cadastrarLivro(event) {
   event.target.reset();
   $("quantidadeLivro").value = 1;
   $("dataAcertoLivro").value = dataAcertoPadrao();
+  $("margemLivro").value = "";
+  $("custoLivro").dataset.manual = "";
   renderizarCapa("");
   cancelarEdicaoLivro(false);
   salvarDados();
@@ -677,6 +696,8 @@ function preencherFormularioLivro(livro) {
   $("categoriaLivro").value = livro.categoria || "Geral";
   $("precoLivro").value = livro.preco || "";
   $("custoLivro").value = livro.custo || livro.preco || "";
+  $("custoLivro").dataset.manual = livro.custo ? "true" : "";
+  $("margemLivro").value = Number.isFinite(Number(livro.margemPercent)) ? Number(livro.margemPercent) : descontoPadraoLivraria(livro.origem);
   $("origemLivro").value = livro.origem || $("origemLivro").value || "Livraria parceira";
   $("dataAcertoLivro").value = livro.dataAcerto || $("dataAcertoLivro").value || dataAcertoPadrao();
   $("capaLivro").value = livro.capa || "";
@@ -691,6 +712,7 @@ function limparFormularioLivroNovo(codigo) {
   $("categoriaLivro").value = "";
   $("precoLivro").value = "";
   $("custoLivro").value = "";
+  $("margemLivro").value = descontoPadraoLivraria($("origemLivro").value) || "";
   $("origemLivro").value = $("origemLivro").value || "Livraria parceira";
   $("dataAcertoLivro").value = $("dataAcertoLivro").value || dataAcertoPadrao();
   $("capaLivro").value = capaPorIsbn(codigo);
@@ -1193,14 +1215,36 @@ function preencherTelefoneReserva() {
 }
 
 function renderizarDatalists() {
-  const origens = Array.from(new Set(livros.map((livro) => livro.origem).filter(Boolean)));
+  const origens = Array.from(new Set([
+    ...livrariasPadrao.map((livraria) => livraria.nome),
+    ...livros.map((livro) => livro.origem).filter(Boolean)
+  ]));
   $("listaLivrarias").innerHTML = origens.map((origem) => `<option value="${escapeHtml(origem)}"></option>`).join("");
 }
 
 function sugerirRepasse() {
+  atualizarRepasseAutomatico(false);
+}
+
+function aplicarPadraoLivraria() {
+  const margem = descontoPadraoLivraria($("origemLivro").value);
+  if (Number.isFinite(margem)) {
+    $("margemLivro").value = margem;
+    atualizarRepasseAutomatico(true);
+  }
+}
+
+function atualizarRepasseAutomatico(forcar) {
   const preco = Number($("precoLivro").value);
-  if (!Number.isFinite(preco) || preco <= 0 || $("custoLivro").value) return;
-  $("custoLivro").value = preco.toFixed(2);
+  const margem = Number($("margemLivro").value || descontoPadraoLivraria($("origemLivro").value) || 0);
+  const custoManual = $("custoLivro").dataset.manual === "true";
+
+  if (!Number.isFinite(preco) || preco <= 0 || !Number.isFinite(margem)) return;
+  if (!forcar && custoManual) return;
+
+  $("margemLivro").value = margem;
+  $("custoLivro").value = calcularRepasse(preco, margem).toFixed(2);
+  $("custoLivro").dataset.manual = "";
 }
 
 function clienteRapido() {
@@ -1256,17 +1300,19 @@ function renderizarAcerto() {
   const devolvidos = lista.reduce((soma, livro) => soma + Number(livro.devolvidos || 0), 0);
   const estoque = lista.reduce((soma, livro) => soma + Number(livro.quantidade || 0), 0);
   const pagar = totalAPagarLivraria();
+  const lucro = totalLucroLivraria();
 
   $("resumoAcerto").textContent = `${lista.length} itens`;
   $("resumoConsignacao").innerHTML = `
     <article><span>Vendido a pagar</span><strong>${caixaVisivel ? formatarMoeda(pagar) : "****"}</strong></article>
+    <article><span>Ganho da igreja</span><strong>${caixaVisivel ? formatarMoeda(lucro) : "****"}</strong></article>
     <article><span>Unidades vendidas</span><strong>${vendidos}</strong></article>
     <article><span>A devolver</span><strong>${estoque}</strong></article>
     <article><span>Ja baixadas</span><strong>${devolvidos}</strong></article>
   `;
 
   $("listaAcerto").innerHTML = lista.length
-    ? `<div class="settlement-row header"><span>Livro</span><span>Recebidos</span><span>Vendidos</span><span>Estoque</span><span>Baixados</span><span>A pagar</span><span>Acerto</span></div>${lista.map(linhaAcerto).join("")}`
+    ? `${resumoLivrariasAcerto(lista)}<div class="settlement-row header"><span>Livro</span><span>Livraria</span><span>Vendidos</span><span>Estoque</span><span>Ganho</span><span>A pagar</span><span>Acerto</span></div>${lista.map(linhaAcerto).join("")}`
     : `<div class="empty-state">Ainda nao ha livros consignados para acerto.</div>`;
 }
 
@@ -1309,7 +1355,9 @@ function fecharAcerto() {
       vendidos: Number(livro.vendidos || 0),
       devolvidos: Number(livro.devolvidos || 0),
       estoqueMantido: Number(livro.quantidade || 0),
-      pagar: valorPagarLivro(livro)
+      margemPercent: margemPorLivro(livro),
+      pagar: valorPagarLivro(livro),
+      lucro: lucroLivro(livro)
     }))
   };
 
@@ -1660,12 +1708,12 @@ function linhaAcerto(livro) {
     <article class="settlement-row">
       <div>
         <strong>${escapeHtml(livro.titulo)}</strong>
-        <div class="book-meta">${escapeHtml(livro.origem || "Livraria parceira")} - ${escapeHtml(livro.codigo || "sem codigo")}</div>
+        <div class="book-meta">${escapeHtml(livro.codigo || "sem codigo")} - ${margemPorLivro(livro).toFixed(2)}% ganho</div>
       </div>
-      <span>${Number(livro.recebidos || 0)}</span>
+      <span>${escapeHtml(livro.origem || "Livraria parceira")}</span>
       <span>${Number(livro.vendidos || 0)}</span>
       <span>${Number(livro.quantidade || 0)}</span>
-      <span>${Number(livro.devolvidos || 0)}</span>
+      <strong>${caixaVisivel ? formatarMoeda(lucroLivro(livro)) : "****"}</strong>
       <strong>${caixaVisivel ? formatarMoeda(valorPagarLivro(livro)) : "****"}</strong>
       <span>${formatarDataCurta(livro.dataAcerto)}</span>
     </article>
@@ -1787,6 +1835,8 @@ function editarLivro(id) {
   $("categoriaLivro").value = livro.categoria || "";
   $("precoLivro").value = Number(livro.preco || 0);
   $("custoLivro").value = Number(livro.custo || livro.preco || 0);
+  $("custoLivro").dataset.manual = "true";
+  $("margemLivro").value = Number.isFinite(Number(livro.margemPercent)) ? Number(livro.margemPercent) : margemPorValores(livro.preco, livro.custo || livro.preco);
   $("quantidadeLivro").value = Number(livro.quantidade || 0);
   $("origemLivro").value = livro.origem || "";
   $("dataAcertoLivro").value = livro.dataAcerto || dataAcertoPadrao();
@@ -1806,6 +1856,8 @@ function cancelarEdicaoLivro(renderizar = true) {
   $("formLivro").reset();
   $("quantidadeLivro").value = 1;
   $("dataAcertoLivro").value = dataAcertoPadrao();
+  $("margemLivro").value = "";
+  $("custoLivro").dataset.manual = "";
   renderizarCapa("");
   if (renderizar) avisar("Edicao do livro cancelada.");
 }
@@ -1859,8 +1911,65 @@ function valorPagarLivro(livro) {
   return Number(livro.vendidos || 0) * Number(livro.custo || livro.preco || 0);
 }
 
+function lucroLivro(livro) {
+  return Number(livro.vendidos || 0) * Math.max(0, Number(livro.preco || 0) - Number(livro.custo || livro.preco || 0));
+}
+
 function totalAPagarLivraria() {
   return livros.reduce((soma, livro) => soma + valorPagarLivro(livro), 0);
+}
+
+function totalLucroLivraria() {
+  return livros.reduce((soma, livro) => soma + lucroLivro(livro), 0);
+}
+
+function resumoLivrariasAcerto(lista) {
+  const grupos = new Map();
+  lista.forEach((livro) => {
+    const origem = livro.origem || "Livraria parceira";
+    const atual = grupos.get(origem) || { origem, vendidos: 0, estoque: 0, pagar: 0, lucro: 0 };
+    atual.vendidos += Number(livro.vendidos || 0);
+    atual.estoque += Number(livro.quantidade || 0);
+    atual.pagar += valorPagarLivro(livro);
+    atual.lucro += lucroLivro(livro);
+    grupos.set(origem, atual);
+  });
+
+  return `
+    <div class="supplier-summary">
+      ${Array.from(grupos.values()).map((item) => `
+        <article>
+          <strong>${escapeHtml(item.origem)}</strong>
+          <span>${item.vendidos} vendido(s), ${item.estoque} em estoque</span>
+          <span>Pagar: ${caixaVisivel ? formatarMoeda(item.pagar) : "****"}</span>
+          <span>Ganho: ${caixaVisivel ? formatarMoeda(item.lucro) : "****"}</span>
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+function descontoPadraoLivraria(origem) {
+  const texto = normalizar(origem);
+  if (!texto) return 0;
+  const encontrada = livrariasPadrao.find((livraria) => texto.includes(normalizar(livraria.nome).split(" ")[0]) || normalizar(livraria.nome).includes(texto));
+  return encontrada ? encontrada.margem : 0;
+}
+
+function calcularRepasse(preco, margemPercent) {
+  return Math.round(Number(preco || 0) * (1 - Number(margemPercent || 0) / 100) * 100) / 100;
+}
+
+function margemPorValores(preco, custo) {
+  const pvp = Number(preco || 0);
+  const repasse = Number(custo || 0);
+  if (!pvp || repasse > pvp) return 0;
+  return Math.round(((pvp - repasse) / pvp) * 10000) / 100;
+}
+
+function margemPorLivro(livro) {
+  if (Number.isFinite(Number(livro.margemPercent))) return Number(livro.margemPercent);
+  return margemPorValores(livro.preco, livro.custo);
 }
 
 function dataAcertoPadrao() {

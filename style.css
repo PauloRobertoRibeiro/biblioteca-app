@@ -663,7 +663,7 @@ label {
 
 .settlement-summary {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   margin-bottom: 12px;
 }
@@ -686,6 +686,28 @@ label {
   display: block;
   margin-top: 4px;
   font-size: 1.2rem;
+}
+
+.supplier-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.supplier-summary article {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid rgba(47, 81, 63, 0.22);
+  border-radius: 8px;
+  background: #edf2e8;
+}
+
+.supplier-summary span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 800;
 }
 
 .settlement-row {

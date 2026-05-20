@@ -1,4 +1,4 @@
-const CACHE_NAME = "biblioteca-livraria-v25";
+const CACHE_NAME = "biblioteca-livraria-v26";
 const URLS_TO_CACHE = [
   "./",
   "./index.html",
