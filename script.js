@@ -67,6 +67,13 @@ const albaransProva = [
   { origem: "Alfa Omega", margemPercent: 4, codigo: "9781576588093", titulo: "Imbatible: La vida de Louis Zamperini", preco: 7.99, custo: 7.68, quantidade: 1 }
 ];
 
+const codigosLivrosExemplo = [
+  "9789897771001",
+  "9789720047289",
+  "9788535914849",
+  "9789722328829"
+];
+
 let usuarioAtual = null;
 let livros = carregar(storage.livros, []);
 let clientes = carregar(storage.clientes, []);
@@ -337,6 +344,7 @@ function bindEventos() {
   $("buscaLivro").addEventListener("input", renderizarBusca);
   $("buscaCliente").addEventListener("input", renderizarBuscaClientes);
   $("filtroEstoque").addEventListener("change", renderizarEstoque);
+  $("btnQuitarExemplos").addEventListener("click", quitarLivrosExemplo);
   $("livroSemana").addEventListener("change", gerarMensagemSemana);
   $("btnGerarMensagemSemana").addEventListener("click", gerarMensagemSemana);
   $("btnWhatsAppProximo").addEventListener("click", abrirWhatsappProximo);
@@ -1161,6 +1169,48 @@ function ajustarEstoque(id, delta) {
   renderizarTudo();
 }
 
+function quitarLivro(id) {
+  const livro = buscarLivroPorId(id);
+  if (!livro) return;
+
+  if (emprestimos.some((item) => item.livroId === id && item.status === "ativo")) {
+    avisar("Nao posso quitar: este livro tem emprestimo ativo.");
+    return;
+  }
+
+  if (reservas.some((item) => item.livroId === id && item.status === "pendente")) {
+    avisar("Nao posso quitar: este livro tem reserva pendente.");
+    return;
+  }
+
+  const ok = confirm(`Quitar/remover este livro da lista?\n\n${livro.titulo}`);
+  if (!ok) return;
+
+  livros = livros.filter((item) => item.id !== id);
+  historico.unshift(evento("estoque", `Livro quitado/removido: ${livro.titulo}`));
+  salvarDados();
+  renderizarTudo();
+  avisar("Livro quitado da lista.");
+}
+
+function quitarLivrosExemplo() {
+  const exemplos = livros.filter((livro) => codigosLivrosExemplo.includes(livro.codigo));
+  if (!exemplos.length) {
+    avisar("Nao encontrei livros de exemplo para quitar.");
+    return;
+  }
+
+  const ok = confirm(`Quitar ${exemplos.length} livro(s) de exemplo?\n\nCidade e as Serras, Memorial do Convento, Dom Casmurro e O Principezinho.`);
+  if (!ok) return;
+
+  const idsExemplo = new Set(exemplos.map((livro) => livro.id));
+  livros = livros.filter((livro) => !idsExemplo.has(livro.id));
+  historico.unshift(evento("estoque", `Livros de exemplo quitados: ${exemplos.map((livro) => livro.titulo).join(", ")}`));
+  salvarDados();
+  renderizarTudo();
+  avisar("Livros de exemplo quitados.");
+}
+
 function renderizarTudo() {
   renderizarMetricas();
   renderizarSelects();
@@ -1821,6 +1871,7 @@ function linhaEstoque(livro) {
         <button type="button" title="Remover unidade" onclick="ajustarEstoque('${livro.id}', -1)">-</button>
         <button type="button" title="Adicionar unidade" onclick="ajustarEstoque('${livro.id}', 1)">+</button>
         <button type="button" title="Editar livro" onclick="editarLivro('${livro.id}')">Editar</button>
+        <button type="button" class="danger-action" title="Quitar livro" onclick="quitarLivro('${livro.id}')">Quitar</button>
       </div>
     </article>
   `;

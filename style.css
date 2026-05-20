@@ -762,6 +762,12 @@ label {
   background: #f7f0e5;
 }
 
+.mini-actions .danger-action {
+  color: #fff;
+  border-color: var(--danger);
+  background: var(--danger);
+}
+
 .reservation-card,
 .client-card {
   grid-template-columns: minmax(0, 1fr) auto;
