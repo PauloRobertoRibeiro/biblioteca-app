@@ -11,13 +11,16 @@ const storage = {
   caixa: "caixa",
   reservas: "reservas",
   vendas: "vendas",
-  acertos: "acertos"
+  acertos: "acertos",
+  livrariaAtual: "livrariaAtual"
 };
 
 const livrariasPadrao = [
   { nome: "Abba Libreria Cristiana", margem: 15 },
   { nome: "Alfa Omega", margem: 4 }
 ];
+
+const livrariaInicial = livrariasPadrao[0].nome;
 
 let usuarioAtual = null;
 let livros = carregar(storage.livros, []);
@@ -49,6 +52,8 @@ document.addEventListener("DOMContentLoaded", () => {
   normalizarDadosAntigos();
   criarDadosExemplo();
   bindEventos();
+  $("origemLivro").value = livrariaAtual();
+  aplicarPadraoLivraria();
   $("dataAcertoLivro").value = $("dataAcertoLivro").value || dataAcertoPadrao();
   renderizarTudo();
 });
@@ -90,7 +95,7 @@ function normalizarDadosAntigos() {
     recebidos: Number(livro.recebidos || (Number(livro.quantidade || 0) + Number(livro.vendidos || 0) + Number(livro.devolvidos || 0))),
     vendidos: Number(livro.vendidos || 0),
     devolvidos: Number(livro.devolvidos || 0),
-    origem: livro.origem || "Livraria parceira",
+    origem: livro.origem || livrariaInicial,
     dataAcerto: livro.dataAcerto || dataAcertoPadrao(),
     criadoEm: livro.criadoEm || new Date().toISOString()
   }));
@@ -183,7 +188,7 @@ function livroExemplo(codigo, titulo, autor, editora, preco, quantidade, categor
     capa: capaPorIsbn(codigo),
     vendidos: 0,
     devolvidos: 0,
-    origem: "Livraria parceira",
+    origem: livrariaInicial,
     dataAcerto: dataAcertoPadrao(),
     criadoEm: new Date().toISOString()
   };
@@ -293,7 +298,8 @@ function cadastrarLivro(event) {
   const capa = $("capaLivro").value.trim() || capaPorIsbn(codigo);
   const preco = Number($("precoLivro").value);
   const quantidade = Number($("quantidadeLivro").value);
-  const origem = $("origemLivro").value.trim() || "Livraria parceira";
+  const origem = $("origemLivro").value.trim() || livrariaAtual();
+  guardarLivrariaAtual(origem);
   const margemPercent = Number($("margemLivro").value || descontoPadraoLivraria(origem) || 0);
   const custo = Number($("custoLivro").value || calcularRepasse(preco, margemPercent));
   const dataAcerto = $("dataAcertoLivro").value || dataAcertoPadrao();
@@ -698,13 +704,14 @@ function preencherFormularioLivro(livro) {
   $("custoLivro").value = livro.custo || livro.preco || "";
   $("custoLivro").dataset.manual = livro.custo ? "true" : "";
   $("margemLivro").value = Number.isFinite(Number(livro.margemPercent)) ? Number(livro.margemPercent) : descontoPadraoLivraria(livro.origem);
-  $("origemLivro").value = livro.origem || $("origemLivro").value || "Livraria parceira";
+  $("origemLivro").value = livro.origem || $("origemLivro").value || livrariaAtual();
   $("dataAcertoLivro").value = livro.dataAcerto || $("dataAcertoLivro").value || dataAcertoPadrao();
   $("capaLivro").value = livro.capa || "";
   renderizarCapa(livro.capa || "");
 }
 
 function limparFormularioLivroNovo(codigo) {
+  const origem = $("origemLivro").value || livrariaAtual();
   $("codigoLivro").value = codigo;
   $("tituloLivro").value = "";
   $("autorLivro").value = "";
@@ -712,8 +719,8 @@ function limparFormularioLivroNovo(codigo) {
   $("categoriaLivro").value = "";
   $("precoLivro").value = "";
   $("custoLivro").value = "";
-  $("margemLivro").value = descontoPadraoLivraria($("origemLivro").value) || "";
-  $("origemLivro").value = $("origemLivro").value || "Livraria parceira";
+  $("origemLivro").value = origem;
+  $("margemLivro").value = descontoPadraoLivraria(origem) || "";
   $("dataAcertoLivro").value = $("dataAcertoLivro").value || dataAcertoPadrao();
   $("capaLivro").value = capaPorIsbn(codigo);
   renderizarCapa(capaPorIsbn(codigo));
@@ -1024,7 +1031,7 @@ function baixarLivroLivraria(event) {
 
   livro.quantidade -= quantidade;
   livro.devolvidos = Number(livro.devolvidos || 0) + quantidade;
-  historico.unshift(evento("baixa", `Baixa para livraria: ${quantidade}x ${livro.titulo} - ${livro.origem || "Livraria parceira"}`));
+  historico.unshift(evento("baixa", `Baixa para livraria: ${quantidade}x ${livro.titulo} - ${livro.origem || livrariaInicial}`));
 
   $("quantidadeBaixa").value = 1;
   salvarDados();
@@ -1227,7 +1234,10 @@ function sugerirRepasse() {
 }
 
 function aplicarPadraoLivraria() {
-  const margem = descontoPadraoLivraria($("origemLivro").value);
+  const origem = $("origemLivro").value.trim() || livrariaAtual();
+  $("origemLivro").value = origem;
+  guardarLivrariaAtual(origem);
+  const margem = descontoPadraoLivraria(origem);
   if (Number.isFinite(margem)) {
     $("margemLivro").value = margem;
     atualizarRepasseAutomatico(true);
@@ -1236,7 +1246,7 @@ function aplicarPadraoLivraria() {
 
 function atualizarRepasseAutomatico(forcar) {
   const preco = Number($("precoLivro").value);
-  const margem = Number($("margemLivro").value || descontoPadraoLivraria($("origemLivro").value) || 0);
+  const margem = Number($("margemLivro").value || descontoPadraoLivraria($("origemLivro").value || livrariaAtual()) || 0);
   const custoManual = $("custoLivro").dataset.manual === "true";
 
   if (!Number.isFinite(preco) || preco <= 0 || !Number.isFinite(margem)) return;
@@ -1710,7 +1720,7 @@ function linhaAcerto(livro) {
         <strong>${escapeHtml(livro.titulo)}</strong>
         <div class="book-meta">${escapeHtml(livro.codigo || "sem codigo")} - ${margemPorLivro(livro).toFixed(2)}% ganho</div>
       </div>
-      <span>${escapeHtml(livro.origem || "Livraria parceira")}</span>
+      <span>${escapeHtml(livro.origem || livrariaInicial)}</span>
       <span>${Number(livro.vendidos || 0)}</span>
       <span>${Number(livro.quantidade || 0)}</span>
       <strong>${caixaVisivel ? formatarMoeda(lucroLivro(livro)) : "****"}</strong>
@@ -1838,7 +1848,7 @@ function editarLivro(id) {
   $("custoLivro").dataset.manual = "true";
   $("margemLivro").value = Number.isFinite(Number(livro.margemPercent)) ? Number(livro.margemPercent) : margemPorValores(livro.preco, livro.custo || livro.preco);
   $("quantidadeLivro").value = Number(livro.quantidade || 0);
-  $("origemLivro").value = livro.origem || "";
+  $("origemLivro").value = livro.origem || livrariaAtual();
   $("dataAcertoLivro").value = livro.dataAcerto || dataAcertoPadrao();
   $("capaLivro").value = livro.capa || "";
   renderizarCapa(livro.capa || "");
@@ -1854,9 +1864,10 @@ function cancelarEdicaoLivro(renderizar = true) {
   $("btnSalvarLivro").textContent = "Adicionar ao estoque";
   $("btnCancelarEdicaoLivro").classList.add("hidden");
   $("formLivro").reset();
+  $("origemLivro").value = livrariaAtual();
+  $("margemLivro").value = descontoPadraoLivraria($("origemLivro").value) || "";
   $("quantidadeLivro").value = 1;
   $("dataAcertoLivro").value = dataAcertoPadrao();
-  $("margemLivro").value = "";
   $("custoLivro").dataset.manual = "";
   renderizarCapa("");
   if (renderizar) avisar("Edicao do livro cancelada.");
@@ -1923,10 +1934,19 @@ function totalLucroLivraria() {
   return livros.reduce((soma, livro) => soma + lucroLivro(livro), 0);
 }
 
+function livrariaAtual() {
+  return localStorage.getItem(storage.livrariaAtual) || livrariaInicial;
+}
+
+function guardarLivrariaAtual(origem) {
+  const valor = String(origem || "").trim();
+  if (valor) localStorage.setItem(storage.livrariaAtual, valor);
+}
+
 function resumoLivrariasAcerto(lista) {
   const grupos = new Map();
   lista.forEach((livro) => {
-    const origem = livro.origem || "Livraria parceira";
+    const origem = livro.origem || livrariaInicial;
     const atual = grupos.get(origem) || { origem, vendidos: 0, estoque: 0, pagar: 0, lucro: 0 };
     atual.vendidos += Number(livro.vendidos || 0);
     atual.estoque += Number(livro.quantidade || 0);
