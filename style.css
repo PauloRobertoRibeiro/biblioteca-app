@@ -788,6 +788,11 @@ label {
   min-height: auto;
 }
 
+.pending-sale {
+  align-self: center;
+  padding: 10px 0;
+}
+
 .reservation-card,
 .client-card {
   grid-template-columns: minmax(0, 1fr) auto;

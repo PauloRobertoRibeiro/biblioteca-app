@@ -162,6 +162,10 @@
                 Quantidade
                 <input type="number" id="quantidadeSaida" min="1" value="1">
               </label>
+              <label class="select-row pending-sale">
+                <input type="checkbox" id="vendaPendente">
+                Cliente levou e nao pagou agora
+              </label>
               <div class="button-row">
                 <button type="button" class="primary-action" id="btnVender">Vender</button>
                 <button type="button" class="secondary-action" id="btnEmprestar">Emprestar</button>
@@ -221,7 +225,7 @@
             </label>
             <label>
               Livraria
-              <input type="text" id="albaranLivraria" list="listaLivrarias" placeholder="Abba Libreria Cristiana ou Alfa Omega">
+              <select id="albaranLivraria"></select>
             </label>
           </div>
           <label class="csv-import">

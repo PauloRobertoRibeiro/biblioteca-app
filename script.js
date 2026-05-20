@@ -201,6 +201,9 @@ function normalizarDadosAntigos() {
       clienteNome: venda.clienteNome || (cliente ? cliente.nome : "Venda sem cliente"),
       quantidade: Number(venda.quantidade || 0),
       total: Number(venda.total || 0),
+      pago: venda.pago !== undefined ? Boolean(venda.pago) : venda.status !== "pendente",
+      pagoEm: venda.pagoEm || "",
+      status: venda.status || (venda.pago === false ? "pendente" : "pago"),
       data: venda.data || new Date().toISOString()
     };
   });
@@ -1095,16 +1098,23 @@ function venderLivro() {
   const livro = buscarLivroPorId($("livroSaida").value);
   const cliente = buscarClientePorId($("clienteSaida").value);
   const quantidade = Number($("quantidadeSaida").value || 1);
+  const pendente = $("vendaPendente").checked;
 
   if (!livro || livro.quantidade < quantidade || quantidade < 1) {
     avisar("Livro indisponivel na quantidade desejada.");
     return;
   }
 
+  if (pendente && !cliente) {
+    avisar("Selecione o cliente para registrar venda sem pagamento.");
+    renderizarFichaCliente();
+    return;
+  }
+
   livro.quantidade -= quantidade;
   livro.vendidos += quantidade;
   const total = livro.preco * quantidade;
-  caixa += total;
+  if (!pendente) caixa += total;
   vendas.unshift({
     id: cryptoId(),
     livroId: livro.id,
@@ -1113,13 +1123,17 @@ function venderLivro() {
     clienteNome: cliente ? cliente.nome : "Venda sem cliente",
     quantidade,
     total,
+    pago: !pendente,
+    pagoEm: pendente ? "" : new Date().toISOString(),
+    status: pendente ? "pendente" : "pago",
     data: new Date().toISOString()
   });
-  historico.unshift(evento("venda", `Venda: ${quantidade}x ${livro.titulo} por ${formatarMoeda(total)}${cliente ? ` para ${cliente.nome}` : ""}`));
+  historico.unshift(evento(pendente ? "venda pendente" : "venda", `${pendente ? "Venda sem pagamento" : "Venda"}: ${quantidade}x ${livro.titulo} por ${formatarMoeda(total)}${cliente ? ` para ${cliente.nome}` : ""}`));
 
+  $("vendaPendente").checked = false;
   salvarDados();
   renderizarTudo();
-  avisar("Venda registrada.");
+  avisar(pendente ? "Venda registrada como pendente de pagamento." : "Venda registrada.");
 }
 
 function emprestarLivro() {
@@ -1511,8 +1525,10 @@ function renderizarFichaCliente() {
 
   const pendentes = emprestimosDoCliente(cliente.id);
   const compras = vendas.filter((venda) => venda.clienteId === cliente.id);
+  const vendasPendentes = vendasPendentesCliente(cliente.id);
+  const valorPendente = totalVendasPendentesCliente(cliente.id);
   const reservasCliente = reservas.filter((reserva) => reserva.status === "pendente" && normalizar(reserva.clienteNome) === normalizar(cliente.nome));
-  const classe = pendentes.length ? "client-profile warning" : "client-profile ok";
+  const classe = pendentes.length || vendasPendentes.length ? "client-profile warning" : "client-profile ok";
 
   painel.className = classe;
   painel.innerHTML = `
@@ -1525,6 +1541,7 @@ function renderizarFichaCliente() {
       <span>${compras.length} compra(s)</span>
       <span>${reservasCliente.length} reserva(s)</span>
     </div>
+    ${vendasPendentes.length ? `<div class="profile-alert">Atencao: levou livro e ainda nao pagou. Valor pendente: ${formatarMoeda(valorPendente)}.</div><button type="button" class="secondary-action" onclick="registrarPagamentoPendente('${cliente.id}')">Marcar como pago</button>` : ""}
     ${pendentes.length ? `<div class="profile-alert">Atencao: cliente tem livro por devolver antes de novo emprestimo.</div>` : `<div class="profile-ok">Cliente sem pendencias de emprestimo.</div>`}
   `;
 }
@@ -1540,6 +1557,11 @@ function renderizarDatalists() {
     ...livros.map((livro) => livro.origem).filter(Boolean)
   ]));
   $("listaLivrarias").innerHTML = origens.map((origem) => `<option value="${escapeHtml(origem)}"></option>`).join("");
+  if ($("albaranLivraria")) {
+    const atual = $("albaranLivraria").value || livrariaAtual();
+    $("albaranLivraria").innerHTML = origens.map((origem) => `<option value="${escapeHtml(origem)}">${escapeHtml(origem)}</option>`).join("");
+    $("albaranLivraria").value = origens.includes(atual) ? atual : livrariaInicial;
+  }
 }
 
 function sugerirRepasse() {
@@ -1715,14 +1737,17 @@ function renderizarClientes() {
     ? clientes.map((cliente) => {
         const compras = vendas.filter((venda) => venda.clienteId === cliente.id).length;
         const emprestados = emprestimos.filter((item) => item.clienteId === cliente.id && item.status === "ativo").length;
+        const valorPendente = totalVendasPendentesCliente(cliente.id);
         return `
           <article class="client-card">
             <div>
               <p class="book-title">${escapeHtml(cliente.nome)}</p>
               <p class="book-meta">${escapeHtml(cliente.telefone || "Sem telefone")} ${cliente.codigo ? `- ${escapeHtml(cliente.codigo)}` : ""}</p>
+              ${valorPendente ? `<p class="profile-alert">Pagamento pendente: ${formatarMoeda(valorPendente)}</p>` : ""}
             </div>
             <div class="client-card-actions">
               <span class="status-pill">${compras} compra(s) / ${emprestados} emprestimo(s)</span>
+              ${valorPendente ? `<button type="button" class="tiny-action" onclick="registrarPagamentoPendente('${cliente.id}')">Pago</button>` : ""}
               <button type="button" class="tiny-action" onclick="editarCliente('${cliente.id}')">Editar</button>
             </div>
           </article>
@@ -2201,6 +2226,35 @@ function buscarClientePorNome(nome) {
 
 function emprestimosDoCliente(clienteId) {
   return emprestimos.filter((item) => item.clienteId === clienteId && item.status === "ativo");
+}
+
+function vendasPendentesCliente(clienteId) {
+  return vendas.filter((venda) => venda.clienteId === clienteId && venda.pago === false);
+}
+
+function totalVendasPendentesCliente(clienteId) {
+  return vendasPendentesCliente(clienteId).reduce((soma, venda) => soma + Number(venda.total || 0), 0);
+}
+
+function registrarPagamentoPendente(clienteId) {
+  const cliente = buscarClientePorId(clienteId);
+  const pendentes = vendasPendentesCliente(clienteId);
+  const total = totalVendasPendentesCliente(clienteId);
+  if (!cliente || !pendentes.length) return;
+
+  const ok = confirm(`Registrar pagamento de ${formatarMoeda(total)} para ${cliente.nome}?`);
+  if (!ok) return;
+
+  pendentes.forEach((venda) => {
+    venda.pago = true;
+    venda.status = "pago";
+    venda.pagoEm = new Date().toISOString();
+  });
+  caixa += total;
+  historico.unshift(evento("pagamento", `Pagamento recebido de ${cliente.nome}: ${formatarMoeda(total)}.`));
+  salvarDados();
+  renderizarTudo();
+  avisar("Pagamento registrado.");
 }
 
 function idOuVazio(item) {
